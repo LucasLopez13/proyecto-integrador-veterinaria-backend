@@ -1,11 +1,21 @@
 'use strict';
 const { Model } = require('sequelize');
+const bcrypt = require('bcryptjs');
 
 module.exports = (sequelize, DataTypes) => {
   class Usuario extends Model {
     static associate(models) {
       Usuario.hasMany(models.Mascota, { foreignKey: 'usuarioId', as: 'mascotas' });
       Usuario.hasMany(models.Turno, { foreignKey: 'usuarioId', as: 'turnos' });
+    }
+
+    async validarPassword(passwordPlana) {
+      return await bcrypt.compare(passwordPlana, this.password);
+    }
+    toJSON() {
+      const values = { ...this.get() };
+      delete values.password;
+      return values;
     }
   }
 
@@ -22,7 +32,10 @@ module.exports = (sequelize, DataTypes) => {
       email: {
         type: DataTypes.STRING,
         allowNull: false,
-        unique: true
+        unique: true,
+        validate: {
+          isEmail: true
+        }
       },
       password: {
         type: DataTypes.STRING,
@@ -33,14 +46,29 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: true
       },
       rol: {
-        type: DataTypes.STRING,
-        defaultValue: 'cliente'
+        type: DataTypes.ENUM('cliente', 'profesional'),
+        defaultValue: 'cliente',
+        allowNull: false
       }
     },
     {
       sequelize,
       modelName: 'Usuario',
-      tableName: 'usuarios'
+      tableName: 'usuarios',
+      hooks: {
+        beforeCreate: async (usuario) => {
+          if (usuario.password) {
+            const salt = await bcrypt.genSalt(10);
+            usuario.password = await bcrypt.hash(usuario.password, salt);
+          }
+        },
+        beforeUpdate: async (usuario) => {
+          if (usuario.changed('password')) {
+            const salt = await bcrypt.genSalt(10);
+            usuario.password = await bcrypt.hash(usuario.password, salt);
+          }
+        }
+      }
     }
   );
 
