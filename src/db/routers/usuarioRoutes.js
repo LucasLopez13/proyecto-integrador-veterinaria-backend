@@ -7,7 +7,7 @@ const { authenticateToken } = require('../middlewares/auth.middleware');
 
 router.get('/', authenticateToken, usuarioController.getAll);
 router.get('/:id', authenticateToken, usuarioController.getById);
-router.post('/', authenticateToken, schemaValidator(usuarioCreateSchema), usuarioController.create);
+router.post('/', schemaValidator(usuarioCreateSchema), usuarioController.create);
 router.put('/:id', authenticateToken, schemaValidator(usuarioUpdateSchema), usuarioController.update);
 router.delete('/:id', authenticateToken, usuarioController.delete);
 
