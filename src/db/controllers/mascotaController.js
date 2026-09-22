@@ -3,12 +3,14 @@ const { Mascota } = db;
 
 const mascotaController = {
   getAll: async (req, res, next) => {
-    try {
-      res.status(501).json({ message: 'No implementado: getAll mascotas' });
-    } catch (error) {
-      next(error);
-    }
-  },
+  try {
+    const mascotas = await Mascota.findAll();
+
+    res.status(200).json(mascotas);
+  } catch (error) {
+    next(error);
+  }
+},
 
   getById: async (req, res, next) => {
     try {

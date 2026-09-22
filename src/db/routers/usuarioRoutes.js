@@ -5,6 +5,7 @@ const schemaValidator = require('../middlewares/schemaValidator');
 const { usuarioCreateSchema, usuarioUpdateSchema } = require('../schema/usuarioSchema');
 
 router.get('/', usuarioController.getAll);
+router.post('/login', usuarioController.login);
 router.get('/:id', usuarioController.getById);
 router.post('/', schemaValidator(usuarioCreateSchema), usuarioController.create);
 router.put('/:id', schemaValidator(usuarioUpdateSchema), usuarioController.update);
