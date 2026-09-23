@@ -13,12 +13,20 @@ const mascotaController = {
 },
 
   getById: async (req, res, next) => {
-    try {
-      res.status(501).json({ message: 'No implementado: getById mascota' });
-    } catch (error) {
-      next(error);
+  try {
+    const mascota = await Mascota.findByPk(req.params.id);
+
+    if (!mascota) {
+      return res.status(404).json({
+        message: 'Mascota no encontrada'
+      });
     }
-  },
+
+    res.status(200).json(mascota);
+  } catch (error) {
+    next(error);
+  }
+},
 
   create: async (req, res, next) => {
     try {
