@@ -1,81 +1,46 @@
-const db = require('../models');
-const { Turno } = db;
+const turnoService = require('../services/turnoService');
 
 const turnoController = {
-  // Obtener todos los turnos
   getAll: async (req, res, next) => {
     try {
-      const turnos = await Turno.findAll();
-
+      const turnos = await turnoService.getAll(req.user);
       res.status(200).json(turnos);
     } catch (error) {
       next(error);
     }
   },
 
-  // Obtener un turno por ID
   getById: async (req, res, next) => {
     try {
-      const turno = await Turno.findByPk(req.params.id);
-
-      if (!turno) {
-        return res.status(404).json({
-          message: 'Turno no encontrado'
-        });
-      }
-
+      const turno = await turnoService.getById(req.params.id, req.user);
       res.status(200).json(turno);
     } catch (error) {
       next(error);
     }
   },
 
-  // Crear un turno
   create: async (req, res, next) => {
-  try {
-    console.log('BODY RECIBIDO:', req.body);
+    try {
+      const turno = await turnoService.create(req.body, req.user);
+      res.status(201).json(turno);
+    } catch (error) {
+      next(error);
+    }
+  },
 
-    const turno = await Turno.create(req.body);
-
-    res.status(201).json(turno);
-  } catch (error) {
-    next(error);
-  }
-},
-
-  // Modificar un turno
   update: async (req, res, next) => {
     try {
-      const turno = await Turno.findByPk(req.params.id);
-
-      if (!turno) {
-        return res.status(404).json({
-          message: 'Turno no encontrado'
-        });
-      }
-
-      await turno.update(req.body);
-
+      const turno = await turnoService.update(req.params.id, req.user, req.body);
       res.status(200).json(turno);
     } catch (error) {
       next(error);
     }
   },
 
-  // Eliminar un turno
   delete: async (req, res, next) => {
     try {
-      const turno = await Turno.findByPk(req.params.id);
-
-      if (!turno) {
-        return res.status(404).json({
-          message: 'Turno no encontrado'
-        });
-      }
-
-      await turno.destroy();
-
-      res.status(204).send();
+      const resultado = await turnoService.delete(req.params.id, req.user);
+      res.status(200).json(resultado);
     } catch (error) {
       next(error);
     }

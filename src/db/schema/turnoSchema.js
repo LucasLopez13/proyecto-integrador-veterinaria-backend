@@ -4,7 +4,7 @@ const turnoCreateSchema = Joi.object({
   fecha: Joi.date().iso().required(),
   motivo: Joi.string().min(3).max(255).required(),
   estado: Joi.string().valid('pendiente', 'confirmado', 'cancelado', 'completado').optional(),
-  usuarioId: Joi.number().integer().positive().required(),
+  usuarioId: Joi.number().integer().positive().optional(),
   mascotaId: Joi.number().integer().positive().required()
 });
 
