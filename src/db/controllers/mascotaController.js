@@ -3,34 +3,36 @@ const { Mascota } = db;
 
 const mascotaController = {
   getAll: async (req, res, next) => {
-  try {
-    const mascotas = await Mascota.findAll();
+    try {
+      const mascotas = await Mascota.findAll();
 
-    res.status(200).json(mascotas);
-  } catch (error) {
-    next(error);
-  }
-},
+      res.status(200).json(mascotas);
+    } catch (error) {
+      next(error);
+    }
+  },
 
   getById: async (req, res, next) => {
-  try {
-    const mascota = await Mascota.findByPk(req.params.id);
+    try {
+      const mascota = await Mascota.findByPk(req.params.id);
 
-    if (!mascota) {
-      return res.status(404).json({
-        message: 'Mascota no encontrada'
-      });
+      if (!mascota) {
+        return res.status(404).json({
+          message: 'Mascota no encontrada'
+        });
+      }
+
+      res.status(200).json(mascota);
+    } catch (error) {
+      next(error);
     }
-
-    res.status(200).json(mascota);
-  } catch (error) {
-    next(error);
-  }
-},
+  },
 
   create: async (req, res, next) => {
     try {
-      res.status(501).json({ message: 'No implementado: create mascota' });
+      const mascota = await Mascota.create(req.body);
+
+      res.status(201).json(mascota);
     } catch (error) {
       next(error);
     }
@@ -38,7 +40,17 @@ const mascotaController = {
 
   update: async (req, res, next) => {
     try {
-      res.status(501).json({ message: 'No implementado: update mascota' });
+      const mascota = await Mascota.findByPk(req.params.id);
+
+      if (!mascota) {
+        return res.status(404).json({
+          message: 'Mascota no encontrada'
+        });
+      }
+
+      await mascota.update(req.body);
+
+      res.status(200).json(mascota);
     } catch (error) {
       next(error);
     }
@@ -46,7 +58,17 @@ const mascotaController = {
 
   delete: async (req, res, next) => {
     try {
-      res.status(501).json({ message: 'No implementado: delete mascota' });
+      const mascota = await Mascota.findByPk(req.params.id);
+
+      if (!mascota) {
+        return res.status(404).json({
+          message: 'Mascota no encontrada'
+        });
+      }
+
+      await mascota.destroy();
+
+      res.status(204).send();
     } catch (error) {
       next(error);
     }
