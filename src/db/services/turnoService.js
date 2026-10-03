@@ -1,6 +1,10 @@
 const db = require('../models');
 const { Turno, Mascota, Usuario } = db;
-const { NotFoundError, ForbiddenError, BadRequestError } = require('../utils/customErrors');
+const {
+  NotFoundError,
+  ForbiddenError,
+  BadRequestError
+} = require('../utils/customErrors');
 
 const turnoService = {
   getAll: async (usuario) => {
@@ -42,26 +46,47 @@ const turnoService = {
     });
 
     if (!turno) {
-      throw new NotFoundError(`Turno con id ${id} no encontrado`);
+      throw new NotFoundError(
+        `Turno con id ${id} no encontrado`
+      );
     }
 
-    if (usuario.rol === 'cliente' && turno.usuarioId !== usuario.id) {
-      throw new ForbiddenError('No tienes permisos para consultar este turno');
+    if (
+      usuario.rol === 'cliente' &&
+      turno.usuarioId !== usuario.id
+    ) {
+      throw new ForbiddenError(
+        'No tienes permisos para consultar este turno'
+      );
     }
 
     return turno;
   },
 
-  create: async ({ fecha, motivo, estado, mascotaId, usuarioId: bodyUsuarioId }, usuario) => {
-    const usuarioId = usuario.rol === 'profesional' && bodyUsuarioId ? bodyUsuarioId : usuario.id;
+  create: async (
+    { fecha, motivo, estado, mascotaId, usuarioId: bodyUsuarioId },
+    usuario
+  ) => {
+    const usuarioId =
+      usuario.rol === 'profesional' && bodyUsuarioId
+        ? bodyUsuarioId
+        : usuario.id;
 
     const mascota = await Mascota.findByPk(mascotaId);
+
     if (!mascota) {
-      throw new NotFoundError(`La mascota con id ${mascotaId} no existe`);
+      throw new NotFoundError(
+        `La mascota con id ${mascotaId} no existe`
+      );
     }
 
-    if (usuario.rol === 'cliente' && mascota.usuarioId !== usuario.id) {
-      throw new ForbiddenError('Solo puedes solicitar turnos para tus propias mascotas');
+    if (
+      usuario.rol === 'cliente' &&
+      mascota.usuarioId !== usuario.id
+    ) {
+      throw new ForbiddenError(
+        'Solo puedes solicitar turnos para tus propias mascotas'
+      );
     }
 
     const nuevoTurno = await Turno.create({
@@ -86,17 +111,40 @@ const turnoService = {
 
   update: async (id, usuario, datos) => {
     const turno = await Turno.findByPk(id);
+
     if (!turno) {
-      throw new NotFoundError(`Turno con id ${id} no encontrado`);
+      throw new NotFoundError(
+        `Turno con id ${id} no encontrado`
+      );
     }
 
     if (usuario.rol === 'cliente') {
       if (turno.usuarioId !== usuario.id) {
-        throw new ForbiddenError('No tienes permisos para modificar este turno');
+        throw new ForbiddenError(
+          'No tienes permisos para modificar este turno'
+        );
       }
+
+      // Un turno cancelado o completado ya no puede modificarse.
+      if (
+        turno.estado === 'cancelado' ||
+        turno.estado === 'completado'
+      ) {
+        throw new BadRequestError(
+          'No se puede modificar un turno cancelado o completado'
+        );
+      }
+
+      // El cliente puede cancelar o reprogramar su turno.
       if (datos.estado && datos.estado !== 'cancelado') {
-        throw new ForbiddenError('Los clientes solo pueden cancelar sus propios turnos');
+        throw new ForbiddenError(
+          'Los clientes solo pueden cancelar sus propios turnos'
+        );
       }
+
+      // El cliente no puede cambiar el dueño ni la mascota.
+      delete datos.usuarioId;
+      delete datos.mascotaId;
     }
 
     await turno.update(datos);
@@ -115,12 +163,20 @@ const turnoService = {
 
   delete: async (id, usuario) => {
     const turno = await Turno.findByPk(id);
+
     if (!turno) {
-      throw new NotFoundError(`Turno con id ${id} no encontrado`);
+      throw new NotFoundError(
+        `Turno con id ${id} no encontrado`
+      );
     }
 
-    if (usuario.rol === 'cliente' && turno.usuarioId !== usuario.id) {
-      throw new ForbiddenError('No tienes permisos para eliminar este turno');
+    if (
+      usuario.rol === 'cliente' &&
+      turno.usuarioId !== usuario.id
+    ) {
+      throw new ForbiddenError(
+        'No tienes permisos para eliminar este turno'
+      );
     }
 
     await turno.destroy();
