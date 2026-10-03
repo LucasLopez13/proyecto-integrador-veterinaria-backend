@@ -6,11 +6,13 @@ const usuarioRoutes = require('./usuarioRoutes');
 const mascotaRoutes = require('./mascotaRoutes');
 const turnoRoutes = require('./turnoRoutes');
 const registroSanitarioRoutes = require('./registroSanitarioRoutes');
+const recetaRoutes = require('./recetaRoutes');
 
 router.use('/auth', authRoutes);
 router.use('/usuarios', usuarioRoutes);
 router.use('/mascotas', mascotaRoutes);
 router.use('/registroSanitario', registroSanitarioRoutes);
 router.use('/turnos', turnoRoutes);
+router.use('/recetas', recetaRoutes);
 
 module.exports = router;

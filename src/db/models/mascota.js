@@ -7,6 +7,7 @@ module.exports = (sequelize, DataTypes) => {
       Mascota.belongsTo(models.Usuario, { foreignKey: 'usuarioId', as: 'dueno' });
       Mascota.hasMany(models.Turno, { foreignKey: 'mascotaId', as: 'turnos' });
       Mascota.hasMany(models.RegistroSanitario, {foreignKey: 'mascotaId',as: 'registrosSanitarios'});
+      Mascota.hasMany(models.Receta, {foreignKey: 'mascotaId',as: 'recetas'});
     }
   }
 
