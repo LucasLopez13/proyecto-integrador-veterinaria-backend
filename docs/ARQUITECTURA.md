@@ -132,7 +132,8 @@ proyecto-integrador-veterinaria-backend/
 ├── docs/                               # Documentacion del sistema
 │   ├── ARQUITECTURA.md                 # Especificacion tecnica de arquitectura (este archivo)
 │   ├── CONVENCION-RAMAS.md             # Estandares de ramas y commits de Git
-│   ├── DER-PF-VETERINARIA.png          # Diagrama Entidad-Relacion
+│   ├── DER.dbml                        # Esquema completo en formato DBML (dbdiagram.io)
+│   ├── DER-PF-VETERINARIA.png          # Diagrama Entidad-Relacion (Render visual)
 │   └── MVP1.md                         # Alcance funcional del MVP
 ├── src/
 │   ├── main.js                         # Inicializacion del servidor Express y sync de BD
@@ -157,6 +158,8 @@ proyecto-integrador-veterinaria-backend/
 A continuacion se presenta el Diagrama Entidad-Relacion (DER) del sistema:
 
 ![Diagrama Entidad Relacion](./DER-PF-VETERINARIA.png)
+
+El esquema completo en formato DBML (3FN) se encuentra disponible y versionado en [docs/DER.dbml](./DER.dbml), el cual puede ser importado y editado interactivamente en [dbdiagram.io](https://dbdiagram.io/).
 
 El modelo de datos relacional implementado en Sequelize contempla las siguientes relaciones principales:
 

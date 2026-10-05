@@ -6,7 +6,8 @@ module.exports = (sequelize, DataTypes) => {
     static associate(models) {
       Mascota.belongsTo(models.Usuario, { foreignKey: 'usuarioId', as: 'dueno' });
       Mascota.hasMany(models.Turno, { foreignKey: 'mascotaId', as: 'turnos' });
-      Mascota.hasMany(models.RegistroSanitario, {foreignKey: 'mascotaId',as: 'registrosSanitarios'});
+      Mascota.hasMany(models.RegistroSanitario, { foreignKey: 'mascotaId', as: 'registrosSanitarios' });
+      Mascota.hasMany(models.Consulta, { foreignKey: 'mascotaId', as: 'consultas' });
     }
   }
 
@@ -30,6 +31,10 @@ module.exports = (sequelize, DataTypes) => {
       },
       sexo: {
         type: DataTypes.STRING,
+        allowNull: true
+      },
+      peso: {
+        type: DataTypes.FLOAT,
         allowNull: true
       },
       usuarioId: {

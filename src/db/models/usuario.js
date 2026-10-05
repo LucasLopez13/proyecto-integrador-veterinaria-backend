@@ -5,8 +5,10 @@ const bcrypt = require('bcryptjs');
 module.exports = (sequelize, DataTypes) => {
   class Usuario extends Model {
     static associate(models) {
+      Usuario.belongsTo(models.Rol, { foreignKey: 'rolId', as: 'rol' });
       Usuario.hasMany(models.Mascota, { foreignKey: 'usuarioId', as: 'mascotas' });
       Usuario.hasMany(models.Turno, { foreignKey: 'usuarioId', as: 'turnos' });
+      Usuario.hasMany(models.Consulta, { foreignKey: 'veterinarioId', as: 'consultasRealizadas' });
     }
 
     async validarPassword(passwordPlana) {
@@ -15,6 +17,9 @@ module.exports = (sequelize, DataTypes) => {
     toJSON() {
       const values = { ...this.get() };
       delete values.password;
+      if (this.rol) {
+        values.rol = typeof this.rol === 'object' ? this.rol.nombre.toLowerCase() : this.rol;
+      }
       return values;
     }
   }
@@ -45,10 +50,10 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.STRING,
         allowNull: true
       },
-      rol: {
-        type: DataTypes.ENUM('cliente', 'profesional'),
-        defaultValue: 'cliente',
-        allowNull: false
+      rolId: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        defaultValue: 1
       }
     },
     {
