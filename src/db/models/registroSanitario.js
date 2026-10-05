@@ -39,7 +39,9 @@ module.exports = (sequelize, DataTypes) => {
     {
       sequelize,
       modelName: 'RegistroSanitario',
-      tableName: 'registros_sanitarios'
+      tableName: 'registros_sanitarios',
+      paranoid: true,
+      timestamps: true
     }
 
   );
