@@ -3,10 +3,7 @@ const router = express.Router();
 const registroSanitarioController = require('../controllers/registroSanitarioController');
 const schemaValidator = require('../middlewares/schemaValidator');
 const { authenticateToken } = require('../middlewares/auth.middleware');
-const {
-    registroSanitarioCreateSchema,
-    registroSanitarioUpdateSchema
-} = require('../schema/registroSanitarioSchema');
+const {registroSanitarioCreateSchema,registroSanitarioUpdateSchema} = require('../schema/registroSanitarioSchema');
 
 router.get('/',authenticateToken,registroSanitarioController.getAll);
 router.get('/mascota/:mascotaId',authenticateToken,registroSanitarioController.getByMascota);
