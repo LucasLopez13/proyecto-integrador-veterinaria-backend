@@ -4,10 +4,30 @@ const { Model } = require('sequelize');
 module.exports = (sequelize, DataTypes) => {
   class Mascota extends Model {
     static associate(models) {
-      Mascota.belongsTo(models.Usuario, { foreignKey: 'usuarioId', as: 'dueno' });
-      Mascota.hasMany(models.Turno, { foreignKey: 'mascotaId', as: 'turnos' });
-      Mascota.hasMany(models.RegistroSanitario, { foreignKey: 'mascotaId', as: 'registrosSanitarios' });
-      Mascota.hasMany(models.Consulta, { foreignKey: 'mascotaId', as: 'consultas' });
+      Mascota.belongsTo(models.Usuario, {
+        foreignKey: 'usuarioId',
+        as: 'dueno'
+      });
+
+      Mascota.hasMany(models.Turno, {
+        foreignKey: 'mascotaId',
+        as: 'turnos'
+      });
+
+      Mascota.hasMany(models.RegistroSanitario, {
+        foreignKey: 'mascotaId',
+        as: 'registrosSanitarios'
+      });
+
+      Mascota.hasMany(models.ArchivoMedico, {
+        foreignKey: 'mascotaId',
+        as: 'archivosMedicos'
+      });
+
+      Mascota.hasMany(models.Consulta, {
+        foreignKey: 'mascotaId',
+        as: 'consultas'
+      });
     }
   }
 
