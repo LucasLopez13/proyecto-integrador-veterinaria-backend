@@ -1,6 +1,6 @@
 const jwt = require('jsonwebtoken');
 const db = require('../models');
-const { Usuario } = db;
+const { Usuario, Rol } = db;
 
 const authenticateToken = async (req, res, next) => {
   const authHeader = req.headers['authorization'];
@@ -16,7 +16,10 @@ const authenticateToken = async (req, res, next) => {
     const secret = process.env.JWT_SECRET;
     const decoded = jwt.verify(token, secret);
 
-    const usuario = await Usuario.findByPk(decoded.id);
+    const usuario = await Usuario.findByPk(decoded.id, {
+      include: [{ model: Rol, as: 'rol' }]
+    });
+
     if (!usuario) {
       return res.status(401).json({
         message: 'Usuario no encontrado o sesión inválida'
@@ -37,7 +40,7 @@ const authenticateToken = async (req, res, next) => {
   }
 };
 
-const requireRole = (...rolesPermitidos) => {
+const hasRole = (...rolesPermitidos) => {
   return (req, res, next) => {
     if (!req.user) {
       return res.status(401).json({
@@ -45,9 +48,16 @@ const requireRole = (...rolesPermitidos) => {
       });
     }
 
-    if (!rolesPermitidos.includes(req.user.rol)) {
+    const rolNombre = typeof req.user.rol === 'object' && req.user.rol?.nombre
+      ? req.user.rol.nombre
+      : String(req.user.rol || '');
+
+    const userRoleNormalizado = rolNombre.toUpperCase().trim();
+    const rolesNormalizados = rolesPermitidos.map((r) => String(r).toUpperCase().trim());
+
+    if (!rolesNormalizados.includes(userRoleNormalizado)) {
       return res.status(403).json({
-        message: `Acceso denegado: Se requiere rol [${rolesPermitidos.join(', ')}]. Tu rol actual es '${req.user.rol}'`
+        message: `Acceso denegado: Se requiere uno de los siguientes roles [${rolesPermitidos.join(', ')}]. Tu rol actual es '${rolNombre}'`
       });
     }
 
@@ -55,7 +65,13 @@ const requireRole = (...rolesPermitidos) => {
   };
 };
 
+const hasAuthority = hasRole;
+const requireRole = hasRole;
+
 module.exports = {
   authenticateToken,
+  hasRole,
+  hasAuthority,
   requireRole
 };
+

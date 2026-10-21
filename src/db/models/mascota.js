@@ -23,6 +23,11 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: 'mascotaId',
         as: 'archivosMedicos'
       });
+
+      Mascota.hasMany(models.Consulta, {
+        foreignKey: 'mascotaId',
+        as: 'consultas'
+      });
     }
   }
 
@@ -48,6 +53,10 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.STRING,
         allowNull: true
       },
+      peso: {
+        type: DataTypes.FLOAT,
+        allowNull: true
+      },
       usuarioId: {
         type: DataTypes.INTEGER,
         allowNull: false
@@ -56,7 +65,9 @@ module.exports = (sequelize, DataTypes) => {
     {
       sequelize,
       modelName: 'Mascota',
-      tableName: 'mascotas'
+      tableName: 'mascotas',
+      paranoid: true,
+      timestamps: true
     }
   );
 

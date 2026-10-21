@@ -1,10 +1,20 @@
 const db = require('../models');
 const { Turno, Mascota, Usuario } = db;
-const { NotFoundError, ForbiddenError, BadRequestError } = require('../utils/customErrors');
+const { NotFoundError, ForbiddenError } = require('../utils/customErrors');
+
+const getRolNombre = (usuario) => {
+  if (!usuario) return '';
+  if (typeof usuario.rol === 'object' && usuario.rol?.nombre) {
+    return usuario.rol.nombre.toLowerCase();
+  }
+  return String(usuario.rol || '').toLowerCase();
+};
 
 const turnoService = {
   getAll: async (usuario) => {
-    if (usuario.rol === 'profesional') {
+    const rol = getRolNombre(usuario);
+
+    if (rol === 'profesional' || rol === 'admin') {
       return await Turno.findAll({
         include: [
           { model: Mascota, as: 'mascota' },
@@ -30,6 +40,7 @@ const turnoService = {
   },
 
   getById: async (id, usuario) => {
+    const rol = getRolNombre(usuario);
     const turno = await Turno.findByPk(id, {
       include: [
         { model: Mascota, as: 'mascota' },
@@ -45,7 +56,7 @@ const turnoService = {
       throw new NotFoundError(`Turno con id ${id} no encontrado`);
     }
 
-    if (usuario.rol === 'cliente' && turno.usuarioId !== usuario.id) {
+    if (rol === 'cliente' && turno.usuarioId !== usuario.id) {
       throw new ForbiddenError('No tienes permisos para consultar este turno');
     }
 
@@ -53,14 +64,15 @@ const turnoService = {
   },
 
   create: async ({ fecha, motivo, estado, mascotaId, usuarioId: bodyUsuarioId }, usuario) => {
-    const usuarioId = usuario.rol === 'profesional' && bodyUsuarioId ? bodyUsuarioId : usuario.id;
+    const rol = getRolNombre(usuario);
+    const usuarioId = (rol === 'profesional' || rol === 'admin') && bodyUsuarioId ? bodyUsuarioId : usuario.id;
 
     const mascota = await Mascota.findByPk(mascotaId);
     if (!mascota) {
       throw new NotFoundError(`La mascota con id ${mascotaId} no existe`);
     }
 
-    if (usuario.rol === 'cliente' && mascota.usuarioId !== usuario.id) {
+    if (rol === 'cliente' && mascota.usuarioId !== usuario.id) {
       throw new ForbiddenError('Solo puedes solicitar turnos para tus propias mascotas');
     }
 
@@ -85,12 +97,13 @@ const turnoService = {
   },
 
   update: async (id, usuario, datos) => {
+    const rol = getRolNombre(usuario);
     const turno = await Turno.findByPk(id);
     if (!turno) {
       throw new NotFoundError(`Turno con id ${id} no encontrado`);
     }
 
-    if (usuario.rol === 'cliente') {
+    if (rol === 'cliente') {
       if (turno.usuarioId !== usuario.id) {
         throw new ForbiddenError('No tienes permisos para modificar este turno');
       }
@@ -114,12 +127,13 @@ const turnoService = {
   },
 
   delete: async (id, usuario) => {
+    const rol = getRolNombre(usuario);
     const turno = await Turno.findByPk(id);
     if (!turno) {
       throw new NotFoundError(`Turno con id ${id} no encontrado`);
     }
 
-    if (usuario.rol === 'cliente' && turno.usuarioId !== usuario.id) {
+    if (rol === 'cliente' && turno.usuarioId !== usuario.id) {
       throw new ForbiddenError('No tienes permisos para eliminar este turno');
     }
 

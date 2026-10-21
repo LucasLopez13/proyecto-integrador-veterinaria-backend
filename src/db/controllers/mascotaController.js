@@ -3,7 +3,7 @@ const mascotaService = require('../services/mascotaService');
 const mascotaController = {
   getAll: async (req, res, next) => {
     try {
-      const mascotas = await mascotaService.getAll(req.user.id);
+      const mascotas = await mascotaService.getAll(req.user);
       res.status(200).json(mascotas);
     } catch (error) {
       next(error);
@@ -14,7 +14,7 @@ const mascotaController = {
     try {
       const mascota = await mascotaService.getById(
         req.params.id,
-        req.user.id
+        req.user
       );
       res.status(200).json(mascota);
     } catch (error) {
@@ -38,7 +38,7 @@ const mascotaController = {
     try {
       const mascota = await mascotaService.update(
         req.params.id,
-        req.user.id,
+        req.user,
         req.body
       );
       res.status(200).json(mascota);
@@ -51,7 +51,7 @@ const mascotaController = {
     try {
       const resultado = await mascotaService.delete(
         req.params.id,
-        req.user.id
+        req.user
       );
       res.status(200).json(resultado);
     } catch (error) {

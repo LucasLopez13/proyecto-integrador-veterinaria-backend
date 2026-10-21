@@ -28,6 +28,20 @@ async function startServer() {
     await db.sequelize.sync();
     console.log('Modelos sincronizados con la base de datos.');
 
+    const rolesDefault = [
+      { id: 1, nombre: 'CLIENTE', descripcion: 'Tutor responsable de pacientes' },
+      { id: 2, nombre: 'PROFESIONAL', descripcion: 'Veterinario o personal medico' },
+      { id: 3, nombre: 'ADMIN', descripcion: 'Administrador general' },
+      { id: 4, nombre: 'RECEPCION', descripcion: 'Recepcion y atencion al cliente' }
+    ];
+
+    for (const r of rolesDefault) {
+      await db.Rol.findOrCreate({
+        where: { id: r.id },
+        defaults: r
+      });
+    }
+
     app.listen(PORT, () => {
       console.log(`Servidor iniciado y escuchando en el puerto ${PORT}`);
     });

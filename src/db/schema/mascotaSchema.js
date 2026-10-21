@@ -5,7 +5,8 @@ const mascotaCreateSchema = Joi.object({
   especie: Joi.string().min(2).max(50).required(),
   raza: Joi.string().allow('', null).optional(),
   edad: Joi.number().integer().min(0).max(50).optional(),
-  sexo: Joi.string().valid('macho', 'hembra', 'desconocido').optional()
+  sexo: Joi.string().valid('macho', 'hembra', 'desconocido').optional(),
+  peso: Joi.number().positive().min(0.01).max(300).optional()
 });
 
 const mascotaUpdateSchema = Joi.object({
@@ -13,7 +14,8 @@ const mascotaUpdateSchema = Joi.object({
   especie: Joi.string().min(2).max(50).optional(),
   raza: Joi.string().allow('', null).optional(),
   edad: Joi.number().integer().min(0).max(50).optional(),
-  sexo: Joi.string().valid('macho', 'hembra', 'desconocido').optional()
+  sexo: Joi.string().valid('macho', 'hembra', 'desconocido').optional(),
+  peso: Joi.number().positive().min(0.01).max(300).optional()
 });
 
 module.exports = {

@@ -6,6 +6,7 @@ module.exports = (sequelize, DataTypes) => {
     static associate(models) {
       Turno.belongsTo(models.Usuario, { foreignKey: 'usuarioId', as: 'usuario' });
       Turno.belongsTo(models.Mascota, { foreignKey: 'mascotaId', as: 'mascota' });
+      Turno.hasOne(models.Consulta, { foreignKey: 'turnoId', as: 'consulta' });
     }
   }
 
@@ -35,7 +36,9 @@ module.exports = (sequelize, DataTypes) => {
     {
       sequelize,
       modelName: 'Turno',
-      tableName: 'turnos'
+      tableName: 'turnos',
+      paranoid: true,
+      timestamps: true
     }
   );
 

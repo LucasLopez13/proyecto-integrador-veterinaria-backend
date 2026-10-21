@@ -1,0 +1,335 @@
+// ============================================================================
+// SISTEMA INTEGRAL DE GESTIÓN VETERINARIA
+// Diagrama Entidad-Relación Normalizado (3FN)
+// Dialecto: SQLite + Sequelize (Paranoid Soft Deletes)
+// ============================================================================
+
+// ============================================================================
+// 1. TABLAS MAESTRAS Y CATÁLOGOS (Eliminación de ENUMs rígidos)
+// ============================================================================
+
+Table roles {
+  id integer [pk, increment]
+  nombre text [unique, not null, note: 'CLIENTE, PROFESIONAL, ADMIN, RECEPCION']
+  descripcion text
+  creado_en text [not null, default: `CURRENT_TIMESTAMP`]
+  actualizado_en text [not null, default: `CURRENT_TIMESTAMP`]
+  eliminado_en text [note: 'NULL = Activo (Soft Delete Paranoid)']
+
+  Note: 'Catálogo de roles para control de acceso'
+}
+
+Table especies {
+  id integer [pk, increment]
+  nombre text [unique, not null, note: 'Canino, Felino, Ave, Roedor, etc.']
+  descripcion text
+  creado_en text [not null, default: `CURRENT_TIMESTAMP`]
+  actualizado_en text [not null, default: `CURRENT_TIMESTAMP`]
+  eliminado_en text [note: 'NULL = Activo']
+
+  Note: 'Catálogo maestro de especies de pacientes'
+}
+
+Table estados_turno {
+  id integer [pk, increment]
+  codigo text [unique, not null, note: 'PENDIENTE, CONFIRMADO, EN_ESPERA, EN_CONSULTA, ATENDIDO, CANCELADO']
+  nombre text [not null]
+  creado_en text [not null, default: `CURRENT_TIMESTAMP`]
+  actualizado_en text [not null, default: `CURRENT_TIMESTAMP`]
+  eliminado_en text [note: 'NULL = Activo']
+
+  Note: 'Estados del ciclo de vida del turno'
+}
+
+Table estados_factura {
+  id integer [pk, increment]
+  codigo text [unique, not null, note: 'PENDIENTE, PAGADA, ANULADA']
+  nombre text [not null]
+  creado_en text [not null, default: `CURRENT_TIMESTAMP`]
+  actualizado_en text [not null, default: `CURRENT_TIMESTAMP`]
+  eliminado_en text [note: 'NULL = Activo']
+
+  Note: 'Estados de cobranza y comprobantes'
+}
+
+Table metodos_pago {
+  id integer [pk, increment]
+  codigo text [unique, not null, note: 'EFECTIVO, TARJETA_DEBITO, TARJETA_CREDITO, MERCADO_PAGO']
+  nombre text [not null]
+  activo integer [not null, default: 1]
+  creado_en text [not null, default: `CURRENT_TIMESTAMP`]
+  actualizado_en text [not null, default: `CURRENT_TIMESTAMP`]
+  eliminado_en text [note: 'NULL = Activo']
+
+  Note: 'Medios de pago admitidos por la clínica'
+}
+
+Table tipos_movimiento_stock {
+  id integer [pk, increment]
+  codigo text [unique, not null, note: 'INGRESO_COMPRA, CONSUMO_CONSULTA, AJUSTE_INVENTARIO, MERMA_VENCIMIENTO']
+  nombre text [not null]
+  es_suma integer [not null, default: 0, note: '1: Incrementa stock, 0: Deduce stock']
+  creado_en text [not null, default: `CURRENT_TIMESTAMP`]
+  actualizado_en text [not null, default: `CURRENT_TIMESTAMP`]
+  eliminado_en text [note: 'NULL = Activo']
+
+  Note: 'Clasificador de movimientos de inventario'
+}
+
+// ============================================================================
+// 2. NÚCLEO OPERATIVO Y PACIENTES
+// ============================================================================
+
+Table usuarios {
+  id integer [pk, increment]
+  rol_id integer [not null]
+  nombre text [not null]
+  apellido text [not null]
+  email text [unique, not null]
+  password text [not null]
+  telefono text
+  creado_en text [not null, default: `CURRENT_TIMESTAMP`]
+  actualizado_en text [not null, default: `CURRENT_TIMESTAMP`]
+  eliminado_en text [note: 'NULL = Activo']
+
+  Note: 'Usuarios del sistema (tutores, veterinarios y administradores)'
+}
+
+Table mascotas {
+  id integer [pk, increment]
+  cliente_id integer [not null]
+  especie_id integer [not null]
+  nombre text [not null]
+  raza text
+  sexo text [note: 'Macho, Hembra, Desconocido']
+  fecha_nacimiento text [note: 'YYYY-MM-DD']
+  peso_actual real [note: 'Último peso registrado en kg']
+  observaciones text
+  creado_en text [not null, default: `CURRENT_TIMESTAMP`]
+  actualizado_en text [not null, default: `CURRENT_TIMESTAMP`]
+  eliminado_en text [note: 'NULL = Activo']
+
+  Note: 'Pacientes vinculados a un cliente tutor'
+}
+
+Table turnos {
+  id integer [pk, increment]
+  cliente_id integer [not null]
+  mascota_id integer [not null]
+  profesional_id integer [note: 'Profesional asignado a la atención']
+  estado_id integer [not null]
+  fecha_hora text [not null, note: 'Fecha y hora en ISO8601']
+  motivo text [not null, note: 'Motivo declarado por el cliente']
+  motivo_cancelacion text
+  creado_en text [not null, default: `CURRENT_TIMESTAMP`]
+  actualizado_en text [not null, default: `CURRENT_TIMESTAMP`]
+  eliminado_en text [note: 'NULL = Activo']
+
+  Note: 'Gestión y reserva de citas de atención'
+}
+
+// ============================================================================
+// 3. NÚCLEO CLÍNICO, ATENCIÓN SOAP Y ARCHIVOS
+// ============================================================================
+
+Table consultas {
+  id integer [pk, increment]
+  turno_id integer [unique, note: 'Turno origen (1:1 opcional)']
+  mascota_id integer [not null]
+  profesional_id integer [not null]
+  fecha_consulta text [not null, default: `CURRENT_TIMESTAMP`]
+  
+  // Metodología SOAP Médica
+  subjetivo text [note: 'Anamnesis reportada por el tutor y motivo']
+  objetivo text [note: 'Examen físico, constantes vitales y hallazgos medibles']
+  peso_en_visita real [note: 'Peso medido en kg al momento de la consulta']
+  temperatura real [note: 'Temperatura en °C']
+  analisis text [note: 'Diagnóstico presuntivo o definitivo']
+  plan text [note: 'Plan de acción terapéutico e indicaciones']
+  
+  creado_en text [not null, default: `CURRENT_TIMESTAMP`]
+  actualizado_en text [not null, default: `CURRENT_TIMESTAMP`]
+  eliminado_en text [note: 'NULL = Activo']
+
+  Note: 'Evolución clínica estructurada bajo metodología SOAP'
+}
+
+Table estudios_adjuntos {
+  id integer [pk, increment]
+  mascota_id integer [not null]
+  consulta_id integer [note: 'Opcional si se vincula a una consulta puntual']
+  nombre_archivo text [not null]
+  ruta_archivo text [not null, note: 'Ruta local en servidor o URL en storage']
+  tipo_mime text [not null, note: 'application/pdf, image/jpeg, etc.']
+  tamano_bytes integer [not null, note: 'Límite para control de cuota de subida']
+  descripcion text
+  creado_en text [not null, default: `CURRENT_TIMESTAMP`]
+  actualizado_en text [not null, default: `CURRENT_TIMESTAMP`]
+  eliminado_en text [note: 'NULL = Activo']
+
+  Note: 'Documentos e informes complementarios (laboratorios, placas, ecografías)'
+}
+
+// ============================================================================
+// 4. FARMACIA, LOTES, RECETAS Y PREVENCIÓN
+// ============================================================================
+
+Table productos {
+  id integer [pk, increment]
+  nombre text [not null]
+  principio_activo text [note: 'Fármaco base para cálculo posológico']
+  concentracion real [note: 'Concentración numérica (mg/ml o mg/comp)']
+  unidad_medida text [not null, note: 'ml, comprimido, ampolla, frasco']
+  stock_actual real [not null, default: 0, note: 'Soporta fracciones decimales']
+  alerta_stock_minimo real [not null, default: 5]
+  precio_unitario real [not null, default: 0]
+  creado_en text [not null, default: `CURRENT_TIMESTAMP`]
+  actualizado_en text [not null, default: `CURRENT_TIMESTAMP`]
+  eliminado_en text [note: 'NULL = Activo']
+
+  Note: 'Catálogo de medicamentos, vacunas e insumos clínicos'
+}
+
+Table lotes {
+  id integer [pk, increment]
+  producto_id integer [not null]
+  numero_lote text [not null]
+  fecha_vencimiento text [not null, note: 'YYYY-MM-DD']
+  stock_inicial real [not null]
+  stock_actual real [not null, note: 'Saldo remanente del lote']
+  creado_en text [not null, default: `CURRENT_TIMESTAMP`]
+  actualizado_en text [not null, default: `CURRENT_TIMESTAMP`]
+  eliminado_en text [note: 'NULL = Activo']
+
+  Note: 'Trazabilidad estricta de vencimientos y partidas de medicamentos y vacunas'
+}
+
+Table recetas {
+  id integer [pk, increment]
+  consulta_id integer [not null]
+  producto_id integer [not null, note: 'Medicamento normalizado desde catálogo']
+  dosis text [not null, note: 'Dosis calculada o indicada']
+  frecuencia text [not null, note: 'Ej: Cada 8 horas']
+  duracion text [not null, note: 'Ej: Durante 7 días']
+  indicaciones text [note: 'Instrucciones claras de toma domiciliaria para el tutor']
+  creado_en text [not null, default: `CURRENT_TIMESTAMP`]
+  actualizado_en text [not null, default: `CURRENT_TIMESTAMP`]
+  eliminado_en text [note: 'NULL = Activo']
+
+  Note: 'Prescripciones vinculadas a la atención médica'
+}
+
+Table vacunas {
+  id integer [pk, increment]
+  mascota_id integer [not null]
+  profesional_id integer [not null]
+  producto_id integer [not null, note: 'Vacuna normalizada desde productos']
+  lote_id integer [not null, note: 'Lote físico administrado']
+  fecha_aplicacion text [not null, note: 'Fecha de administración']
+  fecha_proximo_refuerzo text [note: 'Fecha estimada de próximo refuerzo']
+  observaciones text
+  creado_en text [not null, default: `CURRENT_TIMESTAMP`]
+  actualizado_en text [not null, default: `CURRENT_TIMESTAMP`]
+  eliminado_en text [note: 'NULL = Activo']
+
+  Note: 'Inmunizaciones y libreta sanitaria con trazabilidad de lote'
+}
+
+Table movimientos_stock {
+  id integer [pk, increment]
+  producto_id integer [not null]
+  lote_id integer [note: 'Lote afectado si aplica trazabilidad']
+  tipo_movimiento_id integer [not null]
+  usuario_id integer [not null, note: 'Responsable del movimiento']
+  consulta_id integer [note: 'Consulta donde se consumió la fracción']
+  cantidad real [not null, note: 'Positivo para ingreso, negativo para consumo fraccionado']
+  observaciones text
+  creado_en text [not null, default: `CURRENT_TIMESTAMP`]
+  actualizado_en text [not null, default: `CURRENT_TIMESTAMP`]
+  eliminado_en text [note: 'NULL = Activo']
+
+  Note: 'Auditoría de deducción milimétrica de insumos'
+}
+
+// ============================================================================
+// 5. FACTURACIÓN, COBROS Y AUDITORÍA
+// ============================================================================
+
+Table facturas {
+  id integer [pk, increment]
+  cliente_id integer [not null]
+  consulta_id integer [unique, note: 'Asociación a consulta médica']
+  estado_id integer [not null]
+  metodo_pago_id integer [note: 'Asignado al registrarse el pago']
+  numero_factura text [unique, not null]
+  monto_total real [not null, default: 0]
+  id_transaccion_pago text [note: 'ID devuelto por pasarela externa (ej. Mercado Pago)']
+  fecha_emision text [not null, default: `CURRENT_TIMESTAMP`]
+  fecha_pago text
+  creado_en text [not null, default: `CURRENT_TIMESTAMP`]
+  actualizado_en text [not null, default: `CURRENT_TIMESTAMP`]
+  eliminado_en text [note: 'NULL = Activo']
+
+  Note: 'Comprobantes y órdenes de cobro para caja'
+}
+
+Table registros_auditoria {
+  id integer [pk, increment]
+  usuario_id integer [note: 'Usuario que efectuó la acción']
+  tabla_afectada text [not null, note: 'Nombre de la tabla modificada (ej. consultas)']
+  registro_id integer [not null, note: 'ID de la fila modificada']
+  accion text [not null, note: 'CREAR, ACTUALIZAR, ELIMINAR']
+  valores_anteriores text [note: 'Snapshot JSON antes del cambio']
+  valores_nuevos text [note: 'Snapshot JSON luego del cambio']
+  creado_en text [not null, default: `CURRENT_TIMESTAMP`]
+
+  Note: 'Log inmutable para trazabilidad de historias clínicas y transacciones'
+}
+
+// ============================================================================
+// RELACIONES Y CARDINALIDADES (3FN)
+// ============================================================================
+
+// Maestras y Usuarios
+Ref: usuarios.rol_id > roles.id [delete: restrict, update: cascade]
+Ref: mascotas.cliente_id > usuarios.id [delete: restrict, update: cascade]
+Ref: mascotas.especie_id > especies.id [delete: restrict, update: cascade]
+
+// Turnos
+Ref: turnos.cliente_id > usuarios.id [delete: restrict, update: cascade]
+Ref: turnos.mascota_id > mascotas.id [delete: cascade, update: cascade]
+Ref: turnos.profesional_id > usuarios.id [delete: set null, update: cascade]
+Ref: turnos.estado_id > estados_turno.id [delete: restrict, update: cascade]
+
+// Consultas y Adjuntos
+Ref: consultas.turno_id - turnos.id [delete: set null, update: cascade]
+Ref: consultas.mascota_id > mascotas.id [delete: cascade, update: cascade]
+Ref: consultas.profesional_id > usuarios.id [delete: restrict, update: cascade]
+
+Ref: estudios_adjuntos.mascota_id > mascotas.id [delete: cascade, update: cascade]
+Ref: estudios_adjuntos.consulta_id > consultas.id [delete: set null, update: cascade]
+
+// Farmacia, Lotes, Recetas y Vacunas
+Ref: lotes.producto_id > productos.id [delete: cascade, update: cascade]
+
+Ref: recetas.consulta_id > consultas.id [delete: cascade, update: cascade]
+Ref: recetas.producto_id > productos.id [delete: restrict, update: cascade]
+
+Ref: vacunas.mascota_id > mascotas.id [delete: cascade, update: cascade]
+Ref: vacunas.profesional_id > usuarios.id [delete: restrict, update: cascade]
+Ref: vacunas.producto_id > productos.id [delete: restrict, update: cascade]
+Ref: vacunas.lote_id > lotes.id [delete: restrict, update: cascade]
+
+Ref: movimientos_stock.producto_id > productos.id [delete: restrict, update: cascade]
+Ref: movimientos_stock.lote_id > lotes.id [delete: set null, update: cascade]
+Ref: movimientos_stock.tipo_movimiento_id > tipos_movimiento_stock.id [delete: restrict, update: cascade]
+Ref: movimientos_stock.usuario_id > usuarios.id [delete: restrict, update: cascade]
+Ref: movimientos_stock.consulta_id > consultas.id [delete: set null, update: cascade]
+
+// Facturación y Auditoría
+Ref: facturas.cliente_id > usuarios.id [delete: restrict, update: cascade]
+Ref: facturas.consulta_id - consultas.id [delete: set null, update: cascade]
+Ref: facturas.estado_id > estados_factura.id [delete: restrict, update: cascade]
+Ref: facturas.metodo_pago_id > metodos_pago.id [delete: set null, update: cascade]
+
+Ref: registros_auditoria.usuario_id > usuarios.id [delete: set null, update: cascade]

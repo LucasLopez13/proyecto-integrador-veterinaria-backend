@@ -18,7 +18,8 @@ const authRegisterSchema = Joi.object({
     'string.min': 'La contraseña debe tener al menos 6 caracteres'
   }),
   telefono: Joi.string().allow('', null).optional(),
-  rol: Joi.string().valid('cliente', 'profesional').default('cliente').optional()
+  rol: Joi.string().optional(),
+  rolId: Joi.number().integer().positive().optional()
 });
 
 const authLoginSchema = Joi.object({
@@ -37,7 +38,8 @@ const usuarioCreateSchema = Joi.object({
   email: Joi.string().email().required(),
   password: Joi.string().min(6).required(),
   telefono: Joi.string().allow('', null).optional(),
-  rol: Joi.string().valid('cliente', 'profesional').default('cliente').optional()
+  rol: Joi.string().optional(),
+  rolId: Joi.number().integer().positive().optional()
 });
 
 const usuarioUpdateSchema = Joi.object({
@@ -46,7 +48,8 @@ const usuarioUpdateSchema = Joi.object({
   email: Joi.string().email().optional(),
   password: Joi.string().min(6).optional(),
   telefono: Joi.string().allow('', null).optional(),
-  rol: Joi.string().valid('cliente', 'profesional').optional()
+  rol: Joi.string().optional(),
+  rolId: Joi.number().integer().positive().optional()
 });
 
 module.exports = {
