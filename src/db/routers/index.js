@@ -9,6 +9,7 @@ const registroSanitarioRoutes = require('./registroSanitarioRoutes');
 const archivoMedicoRoutes = require('./archivoMedicoRoutes');
 const consultaRoutes = require('./consultaRoutes');
 const prescripcionRoutes = require('./prescripcionRoutes');
+const triageRoutes = require('./triageRoutes');
 
 router.use('/auth', authRoutes);
 router.use('/usuarios', usuarioRoutes);
@@ -18,5 +19,6 @@ router.use('/turnos', turnoRoutes);
 router.use('/archivos-medicos', archivoMedicoRoutes);
 router.use('/consultas', consultaRoutes);
 router.use('/prescripcion', prescripcionRoutes);
+router.use('/triage', triageRoutes);
 
 module.exports = router;

@@ -28,6 +28,11 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: 'mascotaId',
         as: 'consultas'
       });
+
+      Mascota.hasMany(models.Triage, {
+        foreignKey: 'mascotaId',
+        as: 'triages'
+      });
     }
   }
 

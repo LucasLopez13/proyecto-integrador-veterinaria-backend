@@ -34,6 +34,12 @@ async function startServer() {
       // Ignorar si la columna ya existe en la base de datos
     }
 
+    try {
+      await db.sequelize.query('ALTER TABLE triages ADD COLUMN turnoId INTEGER;');
+    } catch (e) {
+      // Ignorar si la columna ya existe en la base de datos
+    }
+
     const rolesDefault = [
       { id: 1, nombre: 'CLIENTE', descripcion: 'Tutor responsable de pacientes' },
       { id: 2, nombre: 'PROFESIONAL', descripcion: 'Veterinario o personal medico' },
