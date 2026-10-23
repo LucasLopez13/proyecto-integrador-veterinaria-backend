@@ -1,67 +1,88 @@
 const fs = require('fs/promises');
 
 const db = require('../models');
-const { ArchivoMedico, Mascota } = db;
-const { NotFoundError } = require('../utils/customErrors');
+const { Op } = require('sequelize');
+const { ArchivoMedico, Mascota, Consulta} = db;
+const { NotFoundError,ForbiddenError} = require('../utils/customErrors');
+const {verificarAccesoMascota} = require('../utils/mascotaAcces');
+const getRole = (usuario) => {
+    const nombre = usuario?.rol?.nombre || usuario?.rol || '';
+    return String(nombre).toLowerCase().trim();
+};
 
 const archivoMedicoService = {
   create: async (
     { nombre, nombreArchivo, tipo, ruta, mascotaId },
-    usuarioId
+    usuario
   ) => {
-    const mascota = await Mascota.findOne({
-      where: {
-        id: mascotaId,
-        usuarioId
-      }
-    });
-
-    if (!mascota) {
-      throw new NotFoundError(
-        `Mascota con id ${mascotaId} no encontrada`
-      );
-    }
+    const mascota = await verificarAccesoMascota(
+            mascotaId,
+            usuario
+    );
 
     const archivo = await ArchivoMedico.create({
       nombre,
       nombreArchivo,
       tipo,
       ruta,
-      mascotaId
+      mascotaId: mascota.id
     });
 
     return archivo.toJSON();
   },
 
-  getAll: async (usuarioId) => {
-    return await ArchivoMedico.findAll({
-      include: [
-        {
-          model: Mascota,
-          as: 'mascota',
-          where: {
-            usuarioId
-          }
+  getAll: async (usuario) => {
+    const rol = getRole(usuario);
+    if (!usuario?.id) {
+            throw new ForbiddenError('Usuario no autenticado');
+    }
+    if (rol === 'admin') {
+            return await ArchivoMedico.findAll({
+                include: [{ model: Mascota, as: 'mascota' }],
+                order: [['fecha', 'DESC']]
+            });
+    }
+    if (rol === 'cliente') {
+            return await ArchivoMedico.findAll({
+                include: [{
+                    model: Mascota,
+                    as: 'mascota',
+                    where: { usuarioId: usuario.id }
+                }],
+                order: [['fecha', 'DESC']]
+            });
+    }
+    if (rol === 'profesional') {
+            const consultas = await Consulta.findAll({
+                where: { veterinarioId: usuario.id },
+                attributes: ['mascotaId'],
+                raw: true
+            });
+
+            const mascotaIds = [
+                ...new Set(consultas.map(c => c.mascotaId))
+            ];
+
+            if (mascotaIds.length === 0) {
+                return [];
+            }
+
+            return await ArchivoMedico.findAll({
+                where: {
+                    mascotaId: { [Op.in]: mascotaIds }
+                },
+                include: [{ model: Mascota, as: 'mascota' }],
+                order: [['fecha', 'DESC']]
+            });
         }
-      ],
-      order: [['fecha', 'DESC']]
-    });
+    throw new ForbiddenError(
+            'No tienes permisos para consultar archivos médicos'
+    );
   },
 
-  getById: async (id, usuarioId) => {
-    const archivo = await ArchivoMedico.findOne({
-      where: {
-        id
-      },
-      include: [
-        {
-          model: Mascota,
-          as: 'mascota',
-          where: {
-            usuarioId
-          }
-        }
-      ]
+  getById: async (id, usuario) => {
+    const archivo = await ArchivoMedico.findByPk(id, {
+            include: [{ model: Mascota, as: 'mascota' }]
     });
 
     if (!archivo) {
@@ -69,79 +90,60 @@ const archivoMedicoService = {
         `Archivo médico con id ${id} no encontrado`
       );
     }
-
+    await verificarAccesoMascota(
+            archivo.mascotaId,
+            usuario
+    )
     return archivo.toJSON();
   },
 
-  getByMascota: async (mascotaId, usuarioId) => {
-    const mascota = await Mascota.findOne({
-      where: {
-        id: mascotaId,
-        usuarioId
-      }
-    });
-
-    if (!mascota) {
-      throw new NotFoundError(
-        `Mascota con id ${mascotaId} no encontrada`
-      );
-    }
+  getByMascota: async (mascotaId, usuario) => {
+    const mascota = await verificarAccesoMascota(
+            mascotaId,
+            usuario
+    );
 
     return await ArchivoMedico.findAll({
       where: {
-        mascotaId
+        mascotaId:mascota.id
       },
       order: [['fecha', 'DESC']]
     });
   },
 
-  getFile: async (id, usuarioId) => {
-    const archivo = await ArchivoMedico.findOne({
-      where: {
-        id
-      },
-      include: [
-        {
-          model: Mascota,
-          as: 'mascota',
-          where: {
-            usuarioId
-          }
-        }
-      ]
-    });
+  getFile: async (id, usuario) => {
+    const archivo = await ArchivoMedico.findByPk(id);
 
     if (!archivo) {
       throw new NotFoundError(
         `Archivo médico con id ${id} no encontrado`
       );
     }
-
+    await verificarAccesoMascota(
+            archivo.mascotaId,
+            usuario
+        );
     return archivo;
   },
 
-  delete: async (id, usuarioId) => {
-    const archivo = await ArchivoMedico.findOne({
-      where: {
-        id
-      },
-      include: [
-        {
-          model: Mascota,
-          as: 'mascota',
-          where: {
-            usuarioId
-          }
-        }
-      ]
-    });
-
+  delete: async (id, usuario) => {
+    const rol = getRole(usuario);
+    if (rol !== 'profesional' && rol !== 'admin') {
+            throw new ForbiddenError(
+                'Solo un profesional o administrador puede eliminar archivos médicos'
+            );
+    }
+    const archivo = await ArchivoMedico.findByPk(id);
     if (!archivo) {
       throw new NotFoundError(
         `Archivo médico con id ${id} no encontrado`
       );
     }
-
+    await verificarAccesoMascota(
+            archivo.mascotaId,
+            usuario,
+            { soloProfesional: true }
+    );
     // Eliminar el archivo físico del servidor
     try {
       await fs.unlink(archivo.ruta);

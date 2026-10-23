@@ -7,7 +7,7 @@ const archivoMedicoController = {
         try {
             const archivo = await archivoMedicoService.getFile(
                 req.params.id,
-                req.user.id
+                req.user
             );
 
             const rutaArchivo = path.resolve(archivo.ruta);
@@ -24,7 +24,7 @@ const archivoMedicoController = {
     },
     getAll: async (req, res, next) => {
         try {
-            const archivos = await archivoMedicoService.getAll(req.user.id);
+            const archivos = await archivoMedicoService.getAll(req.user);
 
             res.status(200).json(archivos);
         } catch (error) {
@@ -36,7 +36,7 @@ const archivoMedicoController = {
         try {
             const archivo = await archivoMedicoService.getById(
                 req.params.id,
-                req.user.id
+                req.user
             );
 
             res.status(200).json(archivo);
@@ -49,7 +49,7 @@ const archivoMedicoController = {
         try {
             const archivos = await archivoMedicoService.getByMascota(
                 req.params.mascotaId,
-                req.user.id
+                req.user
             );
 
             res.status(200).json(archivos);
@@ -74,7 +74,7 @@ const archivoMedicoController = {
                     ruta: req.file.path,
                     mascotaId: req.body.mascotaId
                 },
-                req.user.id
+                req.user
             );
 
             res.status(201).json(archivo);
@@ -87,7 +87,7 @@ const archivoMedicoController = {
         try {
             const resultado = await archivoMedicoService.delete(
                 req.params.id,
-                req.user.id
+                req.user
             );
 
             res.status(200).json(resultado);

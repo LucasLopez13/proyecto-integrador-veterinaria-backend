@@ -4,7 +4,7 @@ const registroSanitarioController = {
 
     getAll: async (req, res, next) => {
         try {
-            const registros = await registroSanitarioService.getAll(req.user.id);
+            const registros = await registroSanitarioService.getAll(req.user);
             res.status(200).json(registros);
         } catch (error) {
             next(error);
@@ -15,7 +15,7 @@ const registroSanitarioController = {
         try {
             const registro = await registroSanitarioService.getById(
                 req.params.id,
-                req.user.id
+                req.user
             );
             res.status(200).json(registro);
         } catch (error) {
@@ -26,7 +26,7 @@ const registroSanitarioController = {
         try {
             const registros = await registroSanitarioService.getByMascota(
                 req.params.mascotaId,
-                req.user.id
+                req.user
             );
 
             res.status(200).json(registros);
@@ -38,7 +38,7 @@ const registroSanitarioController = {
         try {
             const registro = await registroSanitarioService.create(
                 req.body,
-                req.user.id
+                req.user
             );
             res.status(201).json(registro);
         } catch (error) {
@@ -50,7 +50,7 @@ const registroSanitarioController = {
         try {
             const registro = await registroSanitarioService.update(
                 req.params.id,
-                req.user.id,
+                req.user,
                 req.body
             );
             res.status(200).json(registro);
@@ -63,7 +63,7 @@ const registroSanitarioController = {
         try {
             const resultado = await registroSanitarioService.delete(
                 req.params.id,
-                req.user.id
+                req.user
             );
             res.status(200).json(resultado);
         } catch (error) {

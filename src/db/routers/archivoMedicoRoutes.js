@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 
 const archivoMedicoController = require('../controllers/archivoMedicoController');
-const { authenticateToken } = require('../middlewares/auth.middleware');
+const { authenticateToken, hasRole} = require('../middlewares/auth.middleware');
 const uploadArchivoMedico = require('../middlewares/uploadArchivoMedico');
 
 // Listar todos los archivos médicos del usuario
@@ -44,7 +44,7 @@ router.post(
 // Eliminar un archivo médico
 router.delete(
   '/:id',
-  authenticateToken,
+  authenticateToken,hasRole('profesional', 'admin'),
   archivoMedicoController.delete
 );
 
