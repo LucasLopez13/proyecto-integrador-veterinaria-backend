@@ -28,6 +28,12 @@ async function startServer() {
     await db.sequelize.sync();
     console.log('Modelos sincronizados con la base de datos.');
 
+    try {
+      await db.sequelize.query('ALTER TABLE consultas ADD COLUMN version INTEGER NOT NULL DEFAULT 1;');
+    } catch (e) {
+      // Ignorar si la columna ya existe en la base de datos
+    }
+
     const rolesDefault = [
       { id: 1, nombre: 'CLIENTE', descripcion: 'Tutor responsable de pacientes' },
       { id: 2, nombre: 'PROFESIONAL', descripcion: 'Veterinario o personal medico' },

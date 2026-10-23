@@ -41,7 +41,14 @@ module.exports = (sequelize, DataTypes) => {
       modelName: 'RegistroSanitario',
       tableName: 'registros_sanitarios',
       paranoid: true,
-      timestamps: true
+      timestamps: true,
+      hooks: {
+        beforeDestroy: (instance, options) => {
+          if (options && options.force) {
+            throw new Error('Prohibición estricta de borrados físicos sobre registros médicos (solo soft delete permitido)');
+          }
+        }
+      }
     }
 
   );

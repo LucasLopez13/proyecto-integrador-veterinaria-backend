@@ -8,11 +8,17 @@ module.exports = (sequelize, DataTypes) => {
       Consulta.belongsTo(models.Usuario, { foreignKey: 'veterinarioId', as: 'veterinario' });
       Consulta.belongsTo(models.Turno, { foreignKey: 'turnoId', as: 'turno' });
       Consulta.hasMany(models.Prescripcion, {foreignKey: 'consultaId',as: 'prescripciones'});
+      Consulta.hasMany(models.VersionConsulta, {foreignKey: 'consultaId',as: 'versiones'});
     }
   }
 
   Consulta.init(
     {
+      version: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        defaultValue: 1
+      },
       fecha: {
         type: DataTypes.DATE,
         allowNull: false,
@@ -72,7 +78,14 @@ module.exports = (sequelize, DataTypes) => {
       modelName: 'Consulta',
       tableName: 'consultas',
       paranoid: true,
-      timestamps: true
+      timestamps: true,
+      hooks: {
+        beforeDestroy: (instance, options) => {
+          if (options && options.force) {
+            throw new Error('Prohibición estricta de borrados físicos sobre registros médicos (solo soft delete permitido)');
+          }
+        }
+      }
     }
   );
 
