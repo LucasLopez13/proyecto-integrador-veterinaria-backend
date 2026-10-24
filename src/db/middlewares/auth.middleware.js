@@ -57,7 +57,7 @@ const hasRole = (...rolesPermitidos) => {
 
     if (!rolesNormalizados.includes(userRoleNormalizado)) {
       return res.status(403).json({
-        message: `Acceso denegado: Se requiere uno de los siguientes roles [${rolesPermitidos.join(', ')}]. Tu rol actual es '${rolNombre}'`
+        message: 'Acceso denegado: No tienes permisos suficientes para realizar esta acción'
       });
     }
 

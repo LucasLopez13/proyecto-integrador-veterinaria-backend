@@ -1,6 +1,6 @@
 const db = require('../models');
 const { Turno, Mascota, Usuario } = db;
-const { NotFoundError, ForbiddenError } = require('../utils/customErrors');
+const { NotFoundError, ForbiddenError, BadRequestError } = require('../utils/customErrors');
 
 const getRolNombre = (usuario) => {
   if (!usuario) return '';
@@ -67,6 +67,10 @@ const turnoService = {
     const rol = getRolNombre(usuario);
     const usuarioId = (rol === 'profesional' || rol === 'admin') && bodyUsuarioId ? bodyUsuarioId : usuario.id;
 
+    if (fecha && new Date(fecha).getTime() < Date.now() - 5 * 60 * 1000) {
+      throw new BadRequestError('No se pueden solicitar turnos en una fecha u hora que ya ha pasado');
+    }
+
     const mascota = await Mascota.findByPk(mascotaId);
     if (!mascota) {
       throw new NotFoundError(`La mascota con id ${mascotaId} no existe`);
@@ -101,6 +105,10 @@ const turnoService = {
     const turno = await Turno.findByPk(id);
     if (!turno) {
       throw new NotFoundError(`Turno con id ${id} no encontrado`);
+    }
+
+    if (datos.fecha && new Date(datos.fecha).getTime() < Date.now() - 5 * 60 * 1000) {
+      throw new BadRequestError('La nueva fecha y horario del turno no pueden ser en el pasado');
     }
 
     if (rol === 'cliente') {

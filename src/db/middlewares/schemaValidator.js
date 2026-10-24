@@ -5,11 +5,13 @@ const schemaValidator = (schema) => {
     if (error) {
       const errorDetails = error.details.map((detail) => ({
         field: detail.path.join('.'),
-        message: detail.message
+        message: detail.message.replace(/['"]/g, '')
       }));
 
+      const summary = errorDetails.map((d) => d.message).join('. ');
+
       return res.status(400).json({
-        message: 'Error de validación',
+        message: `Error de validación: ${summary}`,
         errors: errorDetails
       });
     }
