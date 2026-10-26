@@ -11,32 +11,47 @@ const getRolNombre = (usuario) => {
 };
 
 const turnoService = {
-  getAll: async (usuario) => {
+  getAll: async (usuario, query = {}) => {
     const rol = getRolNombre(usuario);
+    const page = query.page ? parseInt(query.page, 10) : null;
+    const limit = query.limit ? parseInt(query.limit, 10) : null;
 
-    if (rol === 'profesional' || rol === 'admin') {
-      return await Turno.findAll({
-        include: [
-          { model: Mascota, as: 'mascota' },
-          {
-            model: Usuario,
-            as: 'usuario',
-            attributes: ['id', 'nombre', 'apellido', 'email', 'telefono']
-          }
-        ],
-        order: [['fecha', 'ASC']]
+    const baseOptions = {
+      include: [
+        { model: Mascota, as: 'mascota' },
+        ...(rol === 'profesional' || rol === 'admin'
+          ? [
+              {
+                model: Usuario,
+                as: 'usuario',
+                attributes: ['id', 'nombre', 'apellido', 'email', 'telefono']
+              }
+            ]
+          : [])
+      ],
+      where: rol === 'profesional' || rol === 'admin' ? {} : { usuarioId: usuario.id },
+      order: [['fecha', 'DESC']]
+    };
+
+    if (page && limit && page > 0 && limit > 0) {
+      const offset = (page - 1) * limit;
+      const { count, rows } = await Turno.findAndCountAll({
+        ...baseOptions,
+        distinct: true,
+        limit,
+        offset
       });
+
+      return {
+        data: rows,
+        total: count,
+        page,
+        limit,
+        totalPages: Math.ceil(count / limit)
+      };
     }
 
-    return await Turno.findAll({
-      where: {
-        usuarioId: usuario.id
-      },
-      include: [
-        { model: Mascota, as: 'mascota' }
-      ],
-      order: [['fecha', 'ASC']]
-    });
+    return await Turno.findAll(baseOptions);
   },
 
   getById: async (id, usuario) => {

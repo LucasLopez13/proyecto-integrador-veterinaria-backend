@@ -3,7 +3,7 @@ const turnoService = require('../services/turnoService');
 const turnoController = {
   getAll: async (req, res, next) => {
     try {
-      const turnos = await turnoService.getAll(req.user);
+      const turnos = await turnoService.getAll(req.user, req.query);
       res.status(200).json(turnos);
     } catch (error) {
       next(error);

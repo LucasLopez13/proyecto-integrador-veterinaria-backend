@@ -1,6 +1,5 @@
-
 const db = require('../models');
-const { Mascota, Consulta } = db;
+const { Mascota } = db;
 const { NotFoundError, ForbiddenError } = require('./customErrors');
 
 const getRole = (usuario) => {
@@ -29,7 +28,14 @@ const verificarAccesoMascota = async (
         );
     }
 
-    const mascota = await Mascota.findByPk(mascotaId);
+    const id = Number(mascotaId);
+    if (!id || isNaN(id)) {
+        throw new NotFoundError(
+            `Mascota con id ${mascotaId} no encontrada`
+        );
+    }
+
+    const mascota = await Mascota.findByPk(id);
 
     if (!mascota) {
         throw new NotFoundError(
@@ -37,29 +43,16 @@ const verificarAccesoMascota = async (
         );
     }
 
-    if (rol === 'admin') {
+    if (rol === 'admin' || rol === 'profesional') {
+        return mascota;
+    }
+
+    if (rol === 'recepcion' && !soloProfesional) {
         return mascota;
     }
 
     if (rol === 'cliente' && !soloProfesional) {
         if (Number(mascota.usuarioId) === Number(usuario.id)) {
-            return mascota;
-        }
-
-        throw new NotFoundError(
-            `Mascota con id ${mascotaId} no encontrada`
-        );
-    }
-
-    if (rol === 'profesional') {
-        const consulta = await Consulta.findOne({
-            where: {
-                mascotaId: mascota.id,
-                veterinarioId: usuario.id
-            }
-        });
-
-        if (consulta) {
             return mascota;
         }
 

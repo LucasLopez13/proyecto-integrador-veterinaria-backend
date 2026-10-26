@@ -1,7 +1,6 @@
 const db = require('../models');
-const { Op } = require('sequelize');
-const { RegistroSanitario, Mascota,Consulta } = db;
-const { NotFoundError,ForbiddenError } = require('../utils/customErrors');
+const { RegistroSanitario, Mascota } = db;
+const { NotFoundError, ForbiddenError } = require('../utils/customErrors');
 const { verificarAccesoMascota } = require('../utils/mascotaAcces');
 
 const getRole = (usuario) => {
@@ -10,7 +9,6 @@ const getRole = (usuario) => {
 };
 
 const registroSanitarioService = {
-
     create: async ({ tipo, nombre, lote, fechaAplicacion, fechaRefuerzoEstimada, mascotaId }, usuario) => {
         const mascota = await verificarAccesoMascota(
             mascotaId,
@@ -28,10 +26,11 @@ const registroSanitarioService = {
         });
         return registro.toJSON(); 
     },
+
     getAll: async (usuario) => {
         const rol = getRole(usuario);
 
-        if (rol === 'admin') {
+        if (rol === 'admin' || rol === 'profesional') {
             return await RegistroSanitario.findAll({
                 include: [{ model: Mascota, as: 'mascota' }],
                 order: [['fechaAplicacion', 'DESC']]
@@ -49,31 +48,11 @@ const registroSanitarioService = {
             });
         }
 
-        if (rol === 'profesional') {
-            const consultas = await Consulta.findAll({
-                where: { veterinarioId: usuario.id },
-                attributes: ['mascotaId'],
-                raw: true
-            });
-            const mascotaIds = [
-                ...new Set(consultas.map(c => c.mascotaId))
-            ];
-
-            if (mascotaIds.length === 0) {
-                return [];
-            }
-            return await RegistroSanitario.findAll({
-                where: {
-                    mascotaId: { [Op.in]: mascotaIds }
-                },
-                include: [{ model: Mascota, as: 'mascota' }],
-                order: [['fechaAplicacion', 'DESC']]
-            });
-        }
         throw new ForbiddenError(
             'No tienes permisos para consultar registros sanitarios'
         );
     },
+
     getById: async (id, usuario) => {
         const registro = await RegistroSanitario.findByPk(id, {
             include: [{ model: Mascota, as: 'mascota' }]
@@ -91,6 +70,7 @@ const registroSanitarioService = {
         );
         return registro.toJSON();
     },
+
     getByMascota: async (mascotaId, usuario) => {
         const mascota = await verificarAccesoMascota(
             mascotaId,
@@ -102,6 +82,7 @@ const registroSanitarioService = {
             order: [['fechaAplicacion', 'DESC']]
         });
     },
+
     update: async (id, usuario, datos) => {
         const registro = await RegistroSanitario.findByPk(id);
 
@@ -132,6 +113,7 @@ const registroSanitarioService = {
         await registro.update(datosPermitidos);
         return registro.toJSON();
     },
+
     delete: async (id, usuario) => {
         const registro = await RegistroSanitario.findByPk(id);
         if (!registro) {
@@ -149,7 +131,6 @@ const registroSanitarioService = {
             message: 'Registro sanitario eliminado correctamente'
         };
     }
-
 };
 
 module.exports = registroSanitarioService;

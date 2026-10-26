@@ -1,8 +1,8 @@
-const archivoMedicoService = require('../services/archivoMedicoService');
+const fs = require('fs/promises');
 const path = require('path');
+const archivoMedicoService = require('../services/archivoMedicoService');
 
 const archivoMedicoController = {
-
     getFile: async (req, res, next) => {
         try {
             const archivo = await archivoMedicoService.getFile(
@@ -22,6 +22,7 @@ const archivoMedicoController = {
             next(error);
         }
     },
+
     getAll: async (req, res, next) => {
         try {
             const archivos = await archivoMedicoService.getAll(req.user);
@@ -79,6 +80,11 @@ const archivoMedicoController = {
 
             res.status(201).json(archivo);
         } catch (error) {
+            if (req.file && req.file.path) {
+                try {
+                    await fs.unlink(req.file.path);
+                } catch {}
+            }
             next(error);
         }
     },
