@@ -1,79 +1,53 @@
+
 const jwt = require('jsonwebtoken');
-const db = require('../models');
-const { Usuario, Rol } = db;
+const { Usuario } = require('../models');
 const { ConflictError, UnauthorizedError } = require('../utils/customErrors');
 
-const generateToken = (usuario) => {
-  const secret = process.env.JWT_SECRET;
-  const expiresIn = process.env.JWT_EXPIRES_IN || '24h';
-  const rolNombre = typeof usuario.rol === 'object' && usuario.rol?.nombre
-    ? usuario.rol.nombre.toLowerCase()
-    : String(usuario.rol || 'cliente').toLowerCase();
+const normalizarRol = (rol) => {
+  const nombre = String(rol || 'cliente').toLowerCase().trim();
+  return nombre === 'veterinario' ? 'profesional' : nombre;
+};
 
+const generateToken = (usuario) => {
   return jwt.sign(
     {
       id: usuario.id,
       email: usuario.email,
-      rol: rolNombre,
+      rol: normalizarRol(usuario.rol),
       nombre: usuario.nombre,
       apellido: usuario.apellido
     },
-    secret,
-    { expiresIn }
+    process.env.JWT_SECRET,
+    { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
   );
 };
 
 const authService = {
-  register: async ({ nombre, apellido, email, password, telefono, rol, rolId }) => {
+  register: async ({ nombre, apellido, email, password, telefono, rol }) => {
     const emailNormalizado = email.toLowerCase().trim();
 
-    const usuarioExistente = await Usuario.findOne({ where: { email: emailNormalizado } });
+    const usuarioExistente = await Usuario.findOne({
+      where: { email: emailNormalizado }
+    });
+
     if (usuarioExistente) {
       throw new ConflictError('El correo electrónico ingresado ya se encuentra registrado');
     }
 
-    let rolIdFinal = rolId;
-    if (!rolIdFinal && rol) {
-      const rolBuscado = await Rol.findOne({
-        where: db.Sequelize.where(
-          db.Sequelize.fn('UPPER', db.Sequelize.col('nombre')),
-          rol.toUpperCase().trim()
-        )
-      });
-      if (rolBuscado) {
-        rolIdFinal = rolBuscado.id;
-      }
-    }
-
-    if (!rolIdFinal) {
-      const rolCliente = await Rol.findOne({
-        where: db.Sequelize.where(
-          db.Sequelize.fn('UPPER', db.Sequelize.col('nombre')),
-          'CLIENTE'
-        )
-      });
-      rolIdFinal = rolCliente ? rolCliente.id : 1;
-    }
-
+    const rolNormalizado = normalizarRol(rol || 'cliente');
     const nuevoUsuario = await Usuario.create({
       nombre: nombre.trim(),
       apellido: apellido.trim(),
       email: emailNormalizado,
       password,
       telefono: telefono ? telefono.trim() : null,
-      rolId: rolIdFinal
+      rol: rolNormalizado
     });
-
-    const usuarioConRol = await Usuario.findByPk(nuevoUsuario.id, {
-      include: [{ model: Rol, as: 'rol' }]
-    });
-
-    const token = generateToken(usuarioConRol || nuevoUsuario);
 
     return {
       message: 'Usuario registrado exitosamente',
-      user: (usuarioConRol || nuevoUsuario).toJSON(),
-      token
+      user: nuevoUsuario.toJSON(),
+      token: generateToken(nuevoUsuario)
     };
   },
 
@@ -81,8 +55,7 @@ const authService = {
     const emailNormalizado = email.toLowerCase().trim();
 
     const usuario = await Usuario.findOne({
-      where: { email: emailNormalizado },
-      include: [{ model: Rol, as: 'rol' }]
+      where: { email: emailNormalizado }
     });
 
     if (!usuario) {
@@ -90,16 +63,15 @@ const authService = {
     }
 
     const passwordValida = await usuario.validarPassword(password);
+
     if (!passwordValida) {
       throw new UnauthorizedError('Credenciales inválidas, intente nuevamente');
     }
 
-    const token = generateToken(usuario);
-
     return {
       message: 'Inicio de sesión exitoso',
       user: usuario.toJSON(),
-      token
+      token: generateToken(usuario)
     };
   }
 };

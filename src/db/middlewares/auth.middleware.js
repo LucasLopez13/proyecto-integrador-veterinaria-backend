@@ -1,9 +1,18 @@
+
 const jwt = require('jsonwebtoken');
-const db = require('../models');
-const { Usuario, Rol } = db;
+const { Usuario } = require('../models');
+
+const normalizarRol = (rol) => {
+  const nombre = typeof rol === 'object' && rol?.nombre
+    ? rol.nombre
+    : String(rol || '');
+
+  const normalizado = nombre.toLowerCase().trim();
+  return normalizado === 'veterinario' ? 'profesional' : normalizado;
+};
 
 const authenticateToken = async (req, res, next) => {
-  const authHeader = req.headers['authorization'];
+  const authHeader = req.headers.authorization;
   const token = authHeader && authHeader.split(' ')[1];
 
   if (!token) {
@@ -13,12 +22,8 @@ const authenticateToken = async (req, res, next) => {
   }
 
   try {
-    const secret = process.env.JWT_SECRET;
-    const decoded = jwt.verify(token, secret);
-
-    const usuario = await Usuario.findByPk(decoded.id, {
-      include: [{ model: Rol, as: 'rol' }]
-    });
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const usuario = await Usuario.findByPk(decoded.id);
 
     if (!usuario) {
       return res.status(401).json({
@@ -34,6 +39,9 @@ const authenticateToken = async (req, res, next) => {
         message: 'Sesión expirada. Por favor inicie sesión nuevamente'
       });
     }
+
+    console.error('Error de autenticación:', error.message);
+
     return res.status(403).json({
       message: 'Token de autenticación inválido'
     });
@@ -48,16 +56,12 @@ const hasRole = (...rolesPermitidos) => {
       });
     }
 
-    const rolNombre = typeof req.user.rol === 'object' && req.user.rol?.nombre
-      ? req.user.rol.nombre
-      : String(req.user.rol || '');
+    const rolUsuario = normalizarRol(req.user.rol);
+    const rolesNormalizados = rolesPermitidos.map(normalizarRol);
 
-    const userRoleNormalizado = rolNombre.toUpperCase().trim();
-    const rolesNormalizados = rolesPermitidos.map((r) => String(r).toUpperCase().trim());
-
-    if (!rolesNormalizados.includes(userRoleNormalizado)) {
+    if (!rolesNormalizados.includes(rolUsuario)) {
       return res.status(403).json({
-        message: `Acceso denegado: Se requiere uno de los siguientes roles [${rolesPermitidos.join(', ')}]. Tu rol actual es '${rolNombre}'`
+        message: `Acceso denegado. Tu rol actual es '${rolUsuario}'`
       });
     }
 
@@ -65,13 +69,10 @@ const hasRole = (...rolesPermitidos) => {
   };
 };
 
-const hasAuthority = hasRole;
-const requireRole = hasRole;
-
 module.exports = {
   authenticateToken,
   hasRole,
-  hasAuthority,
-  requireRole
+  hasAuthority: hasRole,
+  requireRole: hasRole
 };
 
