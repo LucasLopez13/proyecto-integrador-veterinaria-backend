@@ -1,35 +1,47 @@
+
 const db = require('../models');
 const { Turno, Mascota, Usuario } = db;
-const { NotFoundError, ForbiddenError, BadRequestError } = require('../utils/customErrors');
+const {
+  NotFoundError,
+  ForbiddenError,
+  BadRequestError
+} = require('../utils/customErrors');
 
 const getRolNombre = (usuario) => {
   if (!usuario) return '';
+
   if (typeof usuario.rol === 'object' && usuario.rol?.nombre) {
-    return usuario.rol.nombre.toLowerCase();
+    return usuario.rol.nombre.toLowerCase().trim();
   }
-  return String(usuario.rol || '').toLowerCase();
+
+  return String(usuario.rol || '').toLowerCase().trim();
 };
+
+const esProfesional = (rol) =>
+  ['profesional', 'veterinario', 'admin'].includes(rol);
+
+const fechaEnElPasado = (fecha) =>
+  fecha && new Date(fecha).getTime() < Date.now() - 5 * 60 * 1000;
 
 const turnoService = {
   getAll: async (usuario, query = {}) => {
     const rol = getRolNombre(usuario);
     const page = query.page ? parseInt(query.page, 10) : null;
     const limit = query.limit ? parseInt(query.limit, 10) : null;
+    const puedeVerTodos = esProfesional(rol);
 
     const baseOptions = {
       include: [
         { model: Mascota, as: 'mascota' },
-        ...(rol === 'profesional' || rol === 'admin'
-          ? [
-              {
-                model: Usuario,
-                as: 'usuario',
-                attributes: ['id', 'nombre', 'apellido', 'email', 'telefono']
-              }
-            ]
+        ...(puedeVerTodos
+          ? [{
+              model: Usuario,
+              as: 'usuario',
+              attributes: ['id', 'nombre', 'apellido', 'email', 'telefono']
+            }]
           : [])
       ],
-      where: rol === 'profesional' || rol === 'admin' ? {} : { usuarioId: usuario.id },
+      where: puedeVerTodos ? {} : { usuarioId: usuario.id },
       order: [['fecha', 'DESC']]
     };
 
@@ -51,11 +63,12 @@ const turnoService = {
       };
     }
 
-    return await Turno.findAll(baseOptions);
+    return Turno.findAll(baseOptions);
   },
 
   getById: async (id, usuario) => {
     const rol = getRolNombre(usuario);
+
     const turno = await Turno.findByPk(id, {
       include: [
         { model: Mascota, as: 'mascota' },
@@ -72,27 +85,42 @@ const turnoService = {
     }
 
     if (rol === 'cliente' && turno.usuarioId !== usuario.id) {
-      throw new ForbiddenError('No tienes permisos para consultar este turno');
+      throw new ForbiddenError(
+        'No tienes permisos para consultar este turno'
+      );
     }
 
     return turno;
   },
 
-  create: async ({ fecha, motivo, estado, mascotaId, usuarioId: bodyUsuarioId }, usuario) => {
+  create: async (
+    { fecha, motivo, estado, mascotaId, usuarioId: bodyUsuarioId },
+    usuario
+  ) => {
     const rol = getRolNombre(usuario);
-    const usuarioId = (rol === 'profesional' || rol === 'admin') && bodyUsuarioId ? bodyUsuarioId : usuario.id;
+    const usuarioId =
+      esProfesional(rol) && bodyUsuarioId
+        ? bodyUsuarioId
+        : usuario.id;
 
-    if (fecha && new Date(fecha).getTime() < Date.now() - 5 * 60 * 1000) {
-      throw new BadRequestError('No se pueden solicitar turnos en una fecha u hora que ya ha pasado');
+    if (fechaEnElPasado(fecha)) {
+      throw new BadRequestError(
+        'No se pueden solicitar turnos en una fecha u hora que ya ha pasado'
+      );
     }
 
     const mascota = await Mascota.findByPk(mascotaId);
+
     if (!mascota) {
-      throw new NotFoundError(`La mascota con id ${mascotaId} no existe`);
+      throw new NotFoundError(
+        `La mascota con id ${mascotaId} no existe`
+      );
     }
 
     if (rol === 'cliente' && mascota.usuarioId !== usuario.id) {
-      throw new ForbiddenError('Solo puedes solicitar turnos para tus propias mascotas');
+      throw new ForbiddenError(
+        'Solo puedes solicitar turnos para tus propias mascotas'
+      );
     }
 
     const nuevoTurno = await Turno.create({
@@ -103,7 +131,7 @@ const turnoService = {
       mascotaId
     });
 
-    return await Turno.findByPk(nuevoTurno.id, {
+    return Turno.findByPk(nuevoTurno.id, {
       include: [
         { model: Mascota, as: 'mascota' },
         {
@@ -118,26 +146,50 @@ const turnoService = {
   update: async (id, usuario, datos) => {
     const rol = getRolNombre(usuario);
     const turno = await Turno.findByPk(id);
+
     if (!turno) {
       throw new NotFoundError(`Turno con id ${id} no encontrado`);
     }
 
-    if (datos.fecha && new Date(datos.fecha).getTime() < Date.now() - 5 * 60 * 1000) {
-      throw new BadRequestError('La nueva fecha y horario del turno no pueden ser en el pasado');
+    if (fechaEnElPasado(datos.fecha)) {
+      throw new BadRequestError(
+        'La nueva fecha y horario del turno no pueden ser en el pasado'
+      );
     }
+
+    const cambios = { ...datos };
 
     if (rol === 'cliente') {
       if (turno.usuarioId !== usuario.id) {
-        throw new ForbiddenError('No tienes permisos para modificar este turno');
+        throw new ForbiddenError(
+          'No tienes permisos para modificar este turno'
+        );
       }
-      if (datos.estado && datos.estado !== 'cancelado') {
-        throw new ForbiddenError('Los clientes solo pueden cancelar sus propios turnos');
+
+      if (
+        turno.estado === 'cancelado' ||
+        turno.estado === 'completado'
+      ) {
+        throw new BadRequestError(
+          'No se puede modificar un turno cancelado o completado'
+        );
       }
+
+      if (cambios.estado && cambios.estado !== 'cancelado') {
+        throw new ForbiddenError(
+          'Los clientes solo pueden cancelar sus propios turnos'
+        );
+      }
+
+      // El cliente puede reprogramar o cancelar, pero no cambiar
+      // al usuario ni a la mascota asociados al turno.
+      delete cambios.usuarioId;
+      delete cambios.mascotaId;
     }
 
-    await turno.update(datos);
+    await turno.update(cambios);
 
-    return await Turno.findByPk(id, {
+    return Turno.findByPk(id, {
       include: [
         { model: Mascota, as: 'mascota' },
         {
@@ -152,12 +204,15 @@ const turnoService = {
   delete: async (id, usuario) => {
     const rol = getRolNombre(usuario);
     const turno = await Turno.findByPk(id);
+
     if (!turno) {
       throw new NotFoundError(`Turno con id ${id} no encontrado`);
     }
 
     if (rol === 'cliente' && turno.usuarioId !== usuario.id) {
-      throw new ForbiddenError('No tienes permisos para eliminar este turno');
+      throw new ForbiddenError(
+        'No tienes permisos para eliminar este turno'
+      );
     }
 
     await turno.destroy();
