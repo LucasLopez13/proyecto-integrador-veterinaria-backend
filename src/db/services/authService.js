@@ -1,20 +1,16 @@
 const jwt = require('jsonwebtoken');
-const db = require('../models');
-const { Usuario, Rol } = db;
+const { Usuario } = require('../models');
 const { ConflictError, UnauthorizedError } = require('../utils/customErrors');
 
 const generateToken = (usuario) => {
   const secret = process.env.JWT_SECRET;
   const expiresIn = process.env.JWT_EXPIRES_IN || '24h';
-  const rolNombre = typeof usuario.rol === 'object' && usuario.rol?.nombre
-    ? usuario.rol.nombre.toLowerCase()
-    : String(usuario.rol || 'cliente').toLowerCase();
 
   return jwt.sign(
     {
       id: usuario.id,
       email: usuario.email,
-      rol: rolNombre,
+      rol: String(usuario.rol || 'cliente').toLowerCase(),
       nombre: usuario.nombre,
       apellido: usuario.apellido
     },
@@ -24,55 +20,32 @@ const generateToken = (usuario) => {
 };
 
 const authService = {
-  register: async ({ nombre, apellido, email, password, telefono, rol, rolId }) => {
+  register: async ({ nombre, apellido, email, password, telefono, rol }) => {
     const emailNormalizado = email.toLowerCase().trim();
 
-    const usuarioExistente = await Usuario.findOne({ where: { email: emailNormalizado } });
+    const usuarioExistente = await Usuario.findOne({
+      where: { email: emailNormalizado }
+    });
+
     if (usuarioExistente) {
       throw new ConflictError('El correo electrónico ingresado ya se encuentra registrado');
     }
 
-    let rolIdFinal = rolId;
-    if (!rolIdFinal && rol) {
-      const rolBuscado = await Rol.findOne({
-        where: db.Sequelize.where(
-          db.Sequelize.fn('UPPER', db.Sequelize.col('nombre')),
-          rol.toUpperCase().trim()
-        )
-      });
-      if (rolBuscado) {
-        rolIdFinal = rolBuscado.id;
-      }
-    }
-
-    if (!rolIdFinal) {
-      const rolCliente = await Rol.findOne({
-        where: db.Sequelize.where(
-          db.Sequelize.fn('UPPER', db.Sequelize.col('nombre')),
-          'CLIENTE'
-        )
-      });
-      rolIdFinal = rolCliente ? rolCliente.id : 1;
-    }
-
+    // El registro público no debe permitir elegir el rol profesional.
     const nuevoUsuario = await Usuario.create({
       nombre: nombre.trim(),
       apellido: apellido.trim(),
       email: emailNormalizado,
       password,
       telefono: telefono ? telefono.trim() : null,
-      rolId: rolIdFinal
+      rol: 'cliente'
     });
 
-    const usuarioConRol = await Usuario.findByPk(nuevoUsuario.id, {
-      include: [{ model: Rol, as: 'rol' }]
-    });
-
-    const token = generateToken(usuarioConRol || nuevoUsuario);
+    const token = generateToken(nuevoUsuario);
 
     return {
       message: 'Usuario registrado exitosamente',
-      user: (usuarioConRol || nuevoUsuario).toJSON(),
+      user: nuevoUsuario.toJSON(),
       token
     };
   },
@@ -81,8 +54,7 @@ const authService = {
     const emailNormalizado = email.toLowerCase().trim();
 
     const usuario = await Usuario.findOne({
-      where: { email: emailNormalizado },
-      include: [{ model: Rol, as: 'rol' }]
+      where: { email: emailNormalizado }
     });
 
     if (!usuario) {
@@ -90,6 +62,7 @@ const authService = {
     }
 
     const passwordValida = await usuario.validarPassword(password);
+
     if (!passwordValida) {
       throw new UnauthorizedError('Credenciales inválidas, intente nuevamente');
     }

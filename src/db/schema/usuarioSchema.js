@@ -19,7 +19,6 @@ const authRegisterSchema = Joi.object({
   }),
   telefono: Joi.string().allow('', null).optional(),
   rol: Joi.string().optional(),
-  rolId: Joi.number().integer().positive().optional()
 });
 
 const authLoginSchema = Joi.object({
@@ -39,7 +38,6 @@ const usuarioCreateSchema = Joi.object({
   password: Joi.string().min(6).required(),
   telefono: Joi.string().allow('', null).optional(),
   rol: Joi.string().optional(),
-  rolId: Joi.number().integer().positive().optional()
 });
 
 const usuarioUpdateSchema = Joi.object({
@@ -49,7 +47,6 @@ const usuarioUpdateSchema = Joi.object({
   password: Joi.string().min(6).optional(),
   telefono: Joi.string().allow('', null).optional(),
   rol: Joi.string().optional(),
-  rolId: Joi.number().integer().positive().optional()
 });
 
 module.exports = {

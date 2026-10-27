@@ -1,9 +1,8 @@
 const jwt = require('jsonwebtoken');
-const db = require('../models');
-const { Usuario, Rol } = db;
+const { Usuario } = require('../models');
 
 const authenticateToken = async (req, res, next) => {
-  const authHeader = req.headers['authorization'];
+  const authHeader = req.headers.authorization;
   const token = authHeader && authHeader.split(' ')[1];
 
   if (!token) {
@@ -13,12 +12,8 @@ const authenticateToken = async (req, res, next) => {
   }
 
   try {
-    const secret = process.env.JWT_SECRET;
-    const decoded = jwt.verify(token, secret);
-
-    const usuario = await Usuario.findByPk(decoded.id, {
-      include: [{ model: Rol, as: 'rol' }]
-    });
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const usuario = await Usuario.findByPk(decoded.id);
 
     if (!usuario) {
       return res.status(401).json({
@@ -34,6 +29,7 @@ const authenticateToken = async (req, res, next) => {
         message: 'Sesión expirada. Por favor inicie sesión nuevamente'
       });
     }
+
     return res.status(403).json({
       message: 'Token de autenticación inválido'
     });
@@ -48,14 +44,12 @@ const hasRole = (...rolesPermitidos) => {
       });
     }
 
-    const rolNombre = typeof req.user.rol === 'object' && req.user.rol?.nombre
-      ? req.user.rol.nombre
-      : String(req.user.rol || '');
+    const rolUsuario = String(req.user.rol || '').toLowerCase().trim();
+    const roles = rolesPermitidos.map(rol =>
+      String(rol).toLowerCase().trim()
+    );
 
-    const userRoleNormalizado = rolNombre.toUpperCase().trim();
-    const rolesNormalizados = rolesPermitidos.map((r) => String(r).toUpperCase().trim());
-
-    if (!rolesNormalizados.includes(userRoleNormalizado)) {
+    if (!roles.includes(rolUsuario)) {
       return res.status(403).json({
         message: 'Acceso denegado: No tienes permisos suficientes para realizar esta acción'
       });
@@ -65,13 +59,9 @@ const hasRole = (...rolesPermitidos) => {
   };
 };
 
-const hasAuthority = hasRole;
-const requireRole = hasRole;
-
 module.exports = {
   authenticateToken,
   hasRole,
-  hasAuthority,
-  requireRole
+  hasAuthority: hasRole,
+  requireRole: hasRole
 };
-
