@@ -37,6 +37,20 @@ const turnoController = {
     }
   },
 
+  cambiarEstado: async (req, res, next) => {
+    try {
+      const turno = await turnoService.cambiarEstado(
+        req.params.id,
+        req.user,
+        req.body.estado
+      );
+
+      res.status(200).json(turno);
+    } catch (error) {
+      next(error);
+    }
+  },
+
   delete: async (req, res, next) => {
     try {
       const resultado = await turnoService.delete(req.params.id, req.user);
