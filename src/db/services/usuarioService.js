@@ -1,7 +1,10 @@
-
-const db = require('../models');
-const { Usuario, Mascota, Turno } = db;
+const { Usuario, Mascota, Turno } = require('../models');
 const { NotFoundError, ConflictError } = require('../utils/customErrors');
+
+const normalizarRol = (rol) => {
+  const nombre = String(rol || 'cliente').toLowerCase().trim();
+  return nombre === 'veterinario' ? 'profesional' : nombre;
+};
 
 const usuarioService = {
   getAll: async () => {
@@ -26,14 +29,7 @@ const usuarioService = {
     return usuario;
   },
 
-  create: async ({
-    nombre,
-    apellido,
-    email,
-    password,
-    telefono,
-    rol
-  }) => {
+  create: async ({ nombre, apellido, email, password, telefono, rol }) => {
     const emailNormalizado = email.toLowerCase().trim();
 
     const existe = await Usuario.findOne({
@@ -46,17 +42,13 @@ const usuarioService = {
       );
     }
 
-    const rolNormalizado = rol
-      ? rol.trim().toLowerCase()
-      : 'cliente';
-
     const usuario = await Usuario.create({
       nombre: nombre.trim(),
       apellido: apellido.trim(),
       email: emailNormalizado,
       password,
       telefono: telefono ? telefono.trim() : null,
-      rol: rolNormalizado
+      rol: normalizarRol(rol)
     });
 
     return usuario.toJSON();
@@ -69,14 +61,7 @@ const usuarioService = {
       throw new NotFoundError(`Usuario con id ${id} no encontrado`);
     }
 
-    const {
-      nombre,
-      apellido,
-      email,
-      password,
-      telefono,
-      rol
-    } = datosActualizados;
+    const { nombre, apellido, email, password, telefono, rol } = datosActualizados;
 
     if (email && email.toLowerCase().trim() !== usuario.email) {
       const emailNormalizado = email.toLowerCase().trim();
@@ -102,7 +87,7 @@ const usuarioService = {
     }
 
     if (rol !== undefined) {
-      usuario.rol = rol.trim().toLowerCase();
+      usuario.rol = normalizarRol(rol);
     }
 
     if (password) {

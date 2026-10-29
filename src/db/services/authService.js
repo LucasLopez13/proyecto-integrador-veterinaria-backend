@@ -2,25 +2,27 @@ const jwt = require('jsonwebtoken');
 const { Usuario } = require('../models');
 const { ConflictError, UnauthorizedError } = require('../utils/customErrors');
 
-const generateToken = (usuario) => {
-  const secret = process.env.JWT_SECRET;
-  const expiresIn = process.env.JWT_EXPIRES_IN || '24h';
+const normalizarRol = (rol) => {
+  const nombre = String(rol || 'cliente').toLowerCase().trim();
+  return nombre === 'veterinario' ? 'profesional' : nombre;
+};
 
+const generateToken = (usuario) => {
   return jwt.sign(
     {
       id: usuario.id,
       email: usuario.email,
-      rol: String(usuario.rol || 'cliente').toLowerCase(),
+      rol: normalizarRol(usuario.rol),
       nombre: usuario.nombre,
       apellido: usuario.apellido
     },
-    secret,
-    { expiresIn }
+    process.env.JWT_SECRET,
+    { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
   );
 };
 
 const authService = {
-  register: async ({ nombre, apellido, email, password, telefono, rol }) => {
+  register: async ({ nombre, apellido, email, password, telefono }) => {
     const emailNormalizado = email.toLowerCase().trim();
 
     const usuarioExistente = await Usuario.findOne({
@@ -67,12 +69,10 @@ const authService = {
       throw new UnauthorizedError('Credenciales inválidas, intente nuevamente');
     }
 
-    const token = generateToken(usuario);
-
     return {
       message: 'Inicio de sesión exitoso',
       user: usuario.toJSON(),
-      token
+      token: generateToken(usuario)
     };
   }
 };

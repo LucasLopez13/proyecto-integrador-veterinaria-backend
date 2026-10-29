@@ -1,6 +1,15 @@
 const jwt = require('jsonwebtoken');
 const { Usuario } = require('../models');
 
+const normalizarRol = (rol) => {
+  const nombre = typeof rol === 'object' && rol?.nombre
+    ? rol.nombre
+    : String(rol || '');
+
+  const normalizado = nombre.toLowerCase().trim();
+  return normalizado === 'veterinario' ? 'profesional' : normalizado;
+};
+
 const authenticateToken = async (req, res, next) => {
   const authHeader = req.headers.authorization;
   const token = authHeader && authHeader.split(' ')[1];
@@ -30,6 +39,8 @@ const authenticateToken = async (req, res, next) => {
       });
     }
 
+    console.error('Error de autenticación:', error.message);
+
     return res.status(403).json({
       message: 'Token de autenticación inválido'
     });
@@ -44,14 +55,12 @@ const hasRole = (...rolesPermitidos) => {
       });
     }
 
-    const rolUsuario = String(req.user.rol || '').toLowerCase().trim();
-    const roles = rolesPermitidos.map(rol =>
-      String(rol).toLowerCase().trim()
-    );
+    const rolUsuario = normalizarRol(req.user.rol);
+    const rolesNormalizados = rolesPermitidos.map(normalizarRol);
 
-    if (!roles.includes(rolUsuario)) {
+    if (!rolesNormalizados.includes(rolUsuario)) {
       return res.status(403).json({
-        message: 'Acceso denegado: No tienes permisos suficientes para realizar esta acción'
+        message: `Acceso denegado. Tu rol actual es '${rolUsuario}'. No tienes permisos suficientes para realizar esta acción`
       });
     }
 
