@@ -9,6 +9,11 @@ module.exports = (sequelize, DataTypes) => {
         as: 'dueno'
       });
 
+      Mascota.hasOne(models.CarnetVacunacion, {
+        foreignKey: 'mascotaId',
+        as: 'carnetVacunacion'
+      });
+
       Mascota.hasMany(models.Turno, {
         foreignKey: 'mascotaId',
         as: 'turnos'
