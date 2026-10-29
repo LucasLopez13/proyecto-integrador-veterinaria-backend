@@ -35,10 +35,10 @@ const turnoService = {
         { model: Mascota, as: 'mascota' },
         ...(puedeVerTodos
           ? [{
-              model: Usuario,
-              as: 'usuario',
-              attributes: ['id', 'nombre', 'apellido', 'email', 'telefono']
-            }]
+            model: Usuario,
+            as: 'usuario',
+            attributes: ['id', 'nombre', 'apellido', 'email', 'telefono']
+          }]
           : [])
       ],
       where: puedeVerTodos ? {} : { usuarioId: usuario.id },
@@ -188,6 +188,50 @@ const turnoService = {
     }
 
     await turno.update(cambios);
+
+    return Turno.findByPk(id, {
+      include: [
+        { model: Mascota, as: 'mascota' },
+        {
+          model: Usuario,
+          as: 'usuario',
+          attributes: ['id', 'nombre', 'apellido', 'email', 'telefono']
+        }
+      ]
+    });
+  },
+
+  cambiarEstado: async (id, usuario, nuevoEstado) => {
+    const rol = getRolNombre(usuario);
+
+    if (!esProfesional(rol)) {
+      throw new ForbiddenError(
+        'Solo un profesional puede cambiar el estado del turno'
+      );
+    }
+
+    const turno = await Turno.findByPk(id);
+
+    if (!turno) {
+      throw new NotFoundError(`Turno con id ${id} no encontrado`);
+    }
+
+    const transicionesPermitidas = {
+      pendiente: ['confirmado', 'cancelado'],
+      confirmado: ['completado', 'cancelado'],
+      cancelado: [],
+      completado: []
+    };
+
+    const estadosPermitidos = transicionesPermitidas[turno.estado] || [];
+
+    if (!estadosPermitidos.includes(nuevoEstado)) {
+      throw new BadRequestError(
+        `No se puede cambiar el estado de "${turno.estado}" a "${nuevoEstado}"`
+      );
+    }
+
+    await turno.update({ estado: nuevoEstado });
 
     return Turno.findByPk(id, {
       include: [

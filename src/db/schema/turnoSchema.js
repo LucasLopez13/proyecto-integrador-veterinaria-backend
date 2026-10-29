@@ -16,7 +16,14 @@ const turnoUpdateSchema = Joi.object({
   mascotaId: Joi.number().integer().positive().optional()
 });
 
+const turnoEstadoSchema = Joi.object({
+  estado: Joi.string()
+    .valid('confirmado', 'cancelado', 'completado')
+    .required()
+});
+
 module.exports = {
   turnoCreateSchema,
-  turnoUpdateSchema
+  turnoUpdateSchema,
+  turnoEstadoSchema
 };
