@@ -1,9 +1,11 @@
 const jwt = require('jsonwebtoken');
-const { Usuario } = require('../models');
+const db = require('../models');
+const { Usuario, Rol } = db;
 const { ConflictError, UnauthorizedError } = require('../utils/customErrors');
 
-const normalizarRol = (rol) => {
-  const nombre = String(rol || 'cliente').toLowerCase().trim();
+const normalizarRol = (usuario) => {
+  const rolVal = usuario?.rol?.nombre || usuario?.rol || '';
+  const nombre = String(rolVal || 'cliente').toLowerCase().trim();
   return nombre === 'veterinario' ? 'profesional' : nombre;
 };
 
@@ -12,7 +14,7 @@ const generateToken = (usuario) => {
     {
       id: usuario.id,
       email: usuario.email,
-      rol: normalizarRol(usuario.rol),
+      rol: normalizarRol(usuario),
       nombre: usuario.nombre,
       apellido: usuario.apellido
     },
@@ -33,21 +35,24 @@ const authService = {
       throw new ConflictError('El correo electrónico ingresado ya se encuentra registrado');
     }
 
-    // El registro público no debe permitir elegir el rol profesional.
     const nuevoUsuario = await Usuario.create({
       nombre: nombre.trim(),
       apellido: apellido.trim(),
       email: emailNormalizado,
       password,
       telefono: telefono ? telefono.trim() : null,
-      rol: 'cliente'
+      rolId: 1
     });
 
-    const token = generateToken(nuevoUsuario);
+    const usuarioConRol = await Usuario.findByPk(nuevoUsuario.id, {
+      include: [{ model: Rol, as: 'rol' }]
+    });
+
+    const token = generateToken(usuarioConRol);
 
     return {
       message: 'Usuario registrado exitosamente',
-      user: nuevoUsuario.toJSON(),
+      user: usuarioConRol.toJSON(),
       token
     };
   },
@@ -56,7 +61,8 @@ const authService = {
     const emailNormalizado = email.toLowerCase().trim();
 
     const usuario = await Usuario.findOne({
-      where: { email: emailNormalizado }
+      where: { email: emailNormalizado },
+      include: [{ model: Rol, as: 'rol' }]
     });
 
     if (!usuario) {

@@ -47,10 +47,6 @@ const verificarAccesoMascota = async (
         return mascota;
     }
 
-    if (rol === 'recepcion' && !soloProfesional) {
-        return mascota;
-    }
-
     if (rol === 'cliente' && !soloProfesional) {
         if (Number(mascota.usuarioId) === Number(usuario.id)) {
             return mascota;

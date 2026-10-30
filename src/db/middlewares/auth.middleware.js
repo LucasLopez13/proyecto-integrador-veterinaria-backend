@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
-const { Usuario } = require('../models');
+const db = require('../models');
+const { Usuario, Rol } = db;
 
 const normalizarRol = (rol) => {
   const nombre = typeof rol === 'object' && rol?.nombre
@@ -22,7 +23,9 @@ const authenticateToken = async (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const usuario = await Usuario.findByPk(decoded.id);
+    const usuario = await Usuario.findByPk(decoded.id, {
+      include: [{ model: Rol, as: 'rol' }]
+    });
 
     if (!usuario) {
       return res.status(401).json({

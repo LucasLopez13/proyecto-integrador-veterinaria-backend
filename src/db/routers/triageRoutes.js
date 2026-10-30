@@ -13,7 +13,7 @@ const {
 router.get(
   '/',
   authenticateToken,
-  hasRole('profesional', 'admin', 'recepcion'),
+  hasRole('profesional', 'admin'),
   triageController.getKanban
 );
 
@@ -28,7 +28,7 @@ router.get(
 router.post(
   '/',
   authenticateToken,
-  hasRole('profesional', 'admin', 'recepcion'),
+  hasRole('profesional', 'admin'),
   schemaValidator(triageCreateSchema),
   triageController.create
 );
@@ -37,7 +37,7 @@ router.post(
 router.put(
   '/:id/mover',
   authenticateToken,
-  hasRole('profesional', 'admin', 'recepcion'),
+  hasRole('profesional', 'admin'),
   schemaValidator(triageMoverSchema),
   triageController.mover
 );

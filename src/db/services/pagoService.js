@@ -1,16 +1,21 @@
-﻿const db = require('../models');
-const { Pago, Turno, Mascota } = db;
+const db = require('../models');
+const { Pago, Turno, Mascota, Usuario } = db;
 const {
   NotFoundError,
   ForbiddenError,
   BadRequestError
 } = require('../utils/customErrors');
 
-const normalizarRol = (usuario) =>
-  String(usuario?.rol || '').toLowerCase().trim();
+const normalizarRol = (usuario) => {
+  if (!usuario) return '';
+  if (typeof usuario.rol === 'object' && usuario.rol?.nombre) {
+    return usuario.rol.nombre.toLowerCase().trim();
+  }
+  return String(usuario.rol || '').toLowerCase().trim();
+};
 
 const esPersonal = (rol) =>
-  ['profesional', 'veterinario', 'admin', 'recepcion'].includes(rol);
+  ['profesional', 'admin'].includes(rol);
 
 const pagoService = {
   getAll: async (usuario) => {
@@ -18,7 +23,18 @@ const pagoService = {
 
     if (esPersonal(rol)) {
       return Pago.findAll({
-        include: [{ model: Turno, as: 'turno' }],
+        include: [{
+          model: Turno,
+          as: 'turno',
+          include: [
+            { model: Mascota, as: 'mascota' },
+            {
+              model: Usuario,
+              as: 'usuario',
+              attributes: ['id', 'nombre', 'apellido', 'email', 'telefono']
+            }
+          ]
+        }],
         order: [['createdAt', 'DESC']]
       });
     }

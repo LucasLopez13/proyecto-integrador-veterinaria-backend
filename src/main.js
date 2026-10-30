@@ -31,26 +31,22 @@ async function startServer() {
     try {
       await db.sequelize.query('ALTER TABLE consultas ADD COLUMN version INTEGER NOT NULL DEFAULT 1;');
     } catch (e) {
-      // Ignorar si la columna ya existe en la base de datos
     }
 
     try {
       await db.sequelize.query('ALTER TABLE triages ADD COLUMN turnoId INTEGER;');
     } catch (e) {
-      // Ignorar si la columna ya existe en la base de datos
     }
 
     try {
       await db.sequelize.query('ALTER TABLE turnos ADD COLUMN deletedAt DATETIME;');
     } catch (e) {
-      // Ignorar si la columna ya existe en la base de datos
     }
 
     const rolesDefault = [
       { id: 1, nombre: 'CLIENTE', descripcion: 'Tutor responsable de pacientes' },
-      { id: 2, nombre: 'PROFESIONAL', descripcion: 'Veterinario o personal medico' },
-      { id: 3, nombre: 'ADMIN', descripcion: 'Administrador general' },
-      { id: 4, nombre: 'RECEPCION', descripcion: 'Recepcion y atencion al cliente' }
+      { id: 2, nombre: 'PROFESIONAL', descripcion: 'Personal profesional' },
+      { id: 3, nombre: 'ADMIN', descripcion: 'Administrador general' }
     ];
 
     for (const r of rolesDefault) {

@@ -7,6 +7,7 @@ module.exports = (sequelize, DataTypes) => {
       Turno.belongsTo(models.Usuario, { foreignKey: 'usuarioId', as: 'usuario' });
       Turno.belongsTo(models.Mascota, { foreignKey: 'mascotaId', as: 'mascota' });
       Turno.hasOne(models.Consulta, { foreignKey: 'turnoId', as: 'consulta' });
+      Turno.hasMany(models.Pago, { foreignKey: 'turnoId', as: 'pagos' });
     }
   }
 

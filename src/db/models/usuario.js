@@ -13,14 +13,19 @@ module.exports = (sequelize, DataTypes) => {
       const values = { ...this.get() };
       delete values.password;
 
-      if (values.rol) {
-        values.rol = String(values.rol).toLowerCase();
+      if (values.rol && typeof values.rol === 'object' && values.rol.nombre) {
+        values.role = values.rol.nombre.toLowerCase();
       }
 
       return values;
     }
 
     static associate(models) {
+      Usuario.belongsTo(models.Rol, {
+        foreignKey: 'rolId',
+        as: 'rol'
+      });
+
       Usuario.hasMany(models.Mascota, {
         foreignKey: 'usuarioId',
         as: 'mascotas'
@@ -66,10 +71,14 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       allowNull: true
     },
-    rol: {
-      type: DataTypes.STRING,
+    rolId: {
+      type: DataTypes.INTEGER,
       allowNull: false,
-      defaultValue: 'cliente'
+      defaultValue: 1,
+      references: {
+        model: 'roles',
+        key: 'id'
+      }
     }
   }, {
     sequelize,
@@ -78,13 +87,13 @@ module.exports = (sequelize, DataTypes) => {
     timestamps: true,
     paranoid: false,
     hooks: {
-      beforeCreate: async usuario => {
+      beforeCreate: async (usuario) => {
         if (usuario.password) {
           const salt = await bcrypt.genSalt(10);
           usuario.password = await bcrypt.hash(usuario.password, salt);
         }
       },
-      beforeUpdate: async usuario => {
+      beforeUpdate: async (usuario) => {
         if (usuario.changed('password')) {
           const salt = await bcrypt.genSalt(10);
           usuario.password = await bcrypt.hash(usuario.password, salt);
