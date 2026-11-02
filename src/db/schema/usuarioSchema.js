@@ -10,24 +10,25 @@ const authRegisterSchema = Joi.object({
     'string.min': 'El apellido debe tener al menos 2 caracteres'
   }),
   email: Joi.string().email().required().messages({
-    'string.empty': 'El correo electrónico es obligatorio',
-    'string.email': 'Debe proporcionar un correo electrónico válido'
+    'string.empty': 'El correo electronico es obligatorio',
+    'string.email': 'Debe proporcionar un correo electronico valido'
   }),
   password: Joi.string().min(6).required().messages({
-    'string.empty': 'La contraseña es obligatoria',
-    'string.min': 'La contraseña debe tener al menos 6 caracteres'
+    'string.empty': 'La contrasena es obligatoria',
+    'string.min': 'La contrasena debe tener al menos 6 caracteres'
   }),
   telefono: Joi.string().allow('', null).optional(),
   rol: Joi.string().optional(),
+  rolId: Joi.number().integer().optional(),
 });
 
 const authLoginSchema = Joi.object({
   email: Joi.string().email().required().messages({
-    'string.empty': 'El correo electrónico es obligatorio',
-    'string.email': 'Debe proporcionar un correo electrónico válido'
+    'string.empty': 'El correo electronico es obligatorio',
+    'string.email': 'Debe proporcionar un correo electronico valido'
   }),
   password: Joi.string().required().messages({
-    'string.empty': 'La contraseña es obligatoria'
+    'string.empty': 'La contrasena es obligatoria'
   })
 });
 
@@ -38,6 +39,7 @@ const usuarioCreateSchema = Joi.object({
   password: Joi.string().min(6).required(),
   telefono: Joi.string().allow('', null).optional(),
   rol: Joi.string().optional(),
+  rolId: Joi.number().integer().optional(),
 });
 
 const usuarioUpdateSchema = Joi.object({
@@ -47,6 +49,7 @@ const usuarioUpdateSchema = Joi.object({
   password: Joi.string().min(6).optional(),
   telefono: Joi.string().allow('', null).optional(),
   rol: Joi.string().optional(),
+  rolId: Joi.number().integer().optional(),
 });
 
 module.exports = {
@@ -55,3 +58,4 @@ module.exports = {
   usuarioCreateSchema,
   usuarioUpdateSchema
 };
+

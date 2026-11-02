@@ -5,8 +5,16 @@ const { ConflictError, UnauthorizedError } = require('../utils/customErrors');
 
 const normalizarRol = (usuario) => {
   const rolVal = usuario?.rol?.nombre || usuario?.rol || '';
-  const nombre = String(rolVal || 'cliente').toLowerCase().trim();
-  return nombre === 'veterinario' ? 'profesional' : nombre;
+  return String(rolVal || 'cliente').toLowerCase().trim();
+};
+
+const resolverRolId = async (rol, rolId) => {
+  if (rolId) return Number(rolId);
+  if (!rol) return 1;
+  if (typeof rol === 'number') return rol;
+  const nombre = String(rol).trim().toUpperCase();
+  const rolDb = await Rol.findOne({ where: { nombre } });
+  return rolDb ? rolDb.id : 1;
 };
 
 const generateToken = (usuario) => {
@@ -24,7 +32,7 @@ const generateToken = (usuario) => {
 };
 
 const authService = {
-  register: async ({ nombre, apellido, email, password, telefono }) => {
+  register: async ({ nombre, apellido, email, password, telefono, rol, rolId }) => {
     const emailNormalizado = email.toLowerCase().trim();
 
     const usuarioExistente = await Usuario.findOne({
@@ -32,8 +40,10 @@ const authService = {
     });
 
     if (usuarioExistente) {
-      throw new ConflictError('El correo electrónico ingresado ya se encuentra registrado');
+      throw new ConflictError('El correo electronico ingresado ya se encuentra registrado');
     }
+
+    const finalRolId = await resolverRolId(rol, rolId);
 
     const nuevoUsuario = await Usuario.create({
       nombre: nombre.trim(),
@@ -41,7 +51,7 @@ const authService = {
       email: emailNormalizado,
       password,
       telefono: telefono ? telefono.trim() : null,
-      rolId: 1
+      rolId: finalRolId
     });
 
     const usuarioConRol = await Usuario.findByPk(nuevoUsuario.id, {
@@ -66,17 +76,17 @@ const authService = {
     });
 
     if (!usuario) {
-      throw new UnauthorizedError('Credenciales inválidas, intente nuevamente');
+      throw new UnauthorizedError('Credenciales invalidas, intente nuevamente');
     }
 
     const passwordValida = await usuario.validarPassword(password);
 
     if (!passwordValida) {
-      throw new UnauthorizedError('Credenciales inválidas, intente nuevamente');
+      throw new UnauthorizedError('Credenciales invalidas, intente nuevamente');
     }
 
     return {
-      message: 'Inicio de sesión exitoso',
+      message: 'Inicio de sesion exitoso',
       user: usuario.toJSON(),
       token: generateToken(usuario)
     };
@@ -84,3 +94,4 @@ const authService = {
 };
 
 module.exports = authService;
+

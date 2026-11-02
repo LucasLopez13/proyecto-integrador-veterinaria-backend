@@ -58,7 +58,7 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.FLOAT,
         allowNull: false,
         validate: {
-          notEqual: 0
+          min: 0.0001
         }
       },
       observaciones: {
