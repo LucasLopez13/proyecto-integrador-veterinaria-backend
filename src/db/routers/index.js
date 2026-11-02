@@ -14,6 +14,7 @@ const recetaRoutes = require('./recetaRoutes');
 const pagoRoutes = require('./pagoRoutes');
 const carnetVacunacionRoutes = require('./carnetVacunacionRoutes');
 const alertaStockRoutes = require('./alertaStockRoutes');
+const facturacionRoutes = require('./facturacionRoutes');
 
 router.use('/auth', authRoutes);
 router.use('/usuarios', usuarioRoutes);
@@ -28,5 +29,6 @@ router.use('/recetas', recetaRoutes);
 router.use('/pagos', pagoRoutes);
 router.use('/carnets-vacunacion', carnetVacunacionRoutes);
 router.use('/alertas-stock', alertaStockRoutes);
+router.use('/facturacion', facturacionRoutes);
 
 module.exports = router;
