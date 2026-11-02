@@ -5,7 +5,6 @@ const { COLUMNAS_VALIDAS } = require('../schema/triageSchema');
 
 const triageService = {
   getKanban: async () => {
-    // Sincronizar automáticamente turnos confirmados/pendientes ÚNICAMENTE del día de hoy
     if (Turno) {
       try {
         const hoy = new Date();
@@ -20,7 +19,6 @@ const triageService = {
           );
         };
 
-        // 1. Limpiar del tablero los turnos que eran de días anteriores o posteriores en CONSULTA_PROGRAMADA
         const triagesProgramados = await Triage.findAll({
           where: {
             estado: 'ACTIVO',
@@ -34,7 +32,6 @@ const triageService = {
           }
         }
 
-        // 2. Traer turnos pendientes o confirmados del día de hoy
         const turnosPendientes = await Turno.findAll({
           where: {
             estado: ['pendiente', 'confirmado']
@@ -56,10 +53,8 @@ const triageService = {
         for (const t of turnosPendientes) {
           if (!t.mascota) continue;
 
-          // Filtrar estrictamente solo turnos del día de hoy
           if (!esMismoDia(t.fecha, hoy)) continue;
 
-          // Verificar si ya existe este turno en triage (incluso si fue egresado con soft-delete)
           const existe = await Triage.findOne({
             where: { turnoId: t.id },
             paranoid: false
@@ -216,7 +211,7 @@ const triageService = {
     }
 
     await item.update({ estado: 'FINALIZADO' });
-    await item.destroy({ force: false }); // Soft delete
+    await item.destroy({ force: false });
 
     return {
       message: 'Paciente egresado del tablero de triage y guardia correctamente',

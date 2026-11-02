@@ -4,7 +4,6 @@ const { Producto, Lote, MovimientoStock, TipoMovimientoStock, Usuario, Consulta 
 const { BadRequestError, NotFoundError } = require('../utils/customErrors');
 
 const inventarioService = {
-  // Obtener productos con sus lotes activos y con stock disponible
   getProductosConLotes: async () => {
     const productos = await Producto.findAll({
       order: [['nombre', 'ASC']],
@@ -25,7 +24,6 @@ const inventarioService = {
 
     return productos.map((p) => {
       const prodJson = p.toJSON();
-      // Filtrar lotes activos que no esten vencidos para seleccion rapida
       const hoyStr = new Date().toISOString().slice(0, 10);
       prodJson.lotesDisponibles = (prodJson.lotes || []).filter(
         (l) => l.fechaVencimiento >= hoyStr && Number(l.stockActual) > 0
@@ -34,7 +32,6 @@ const inventarioService = {
     });
   },
 
-  // Registrar deduccion de stock por consumo fraccionado
   registrarConsumo: async (
     { productoId, loteId, cantidad, consultaId, observaciones },
     usuario,
@@ -46,7 +43,6 @@ const inventarioService = {
     }
 
     const ejecutarOperacion = async (t) => {
-      // 1. Obtener o crear el Tipo de Movimiento para consumo clinico
       let [tipoMov] = await TipoMovimientoStock.findOrCreate({
         where: { codigo: 'CONSUMO_CLINICO' },
         defaults: {
@@ -57,7 +53,6 @@ const inventarioService = {
         transaction: t
       });
 
-      // 2. Buscar Producto con bloqueo transaccional
       const producto = await Producto.findByPk(productoId, {
         transaction: t,
         lock: t.LOCK ? t.LOCK.UPDATE : undefined
@@ -66,7 +61,6 @@ const inventarioService = {
         throw new NotFoundError(`Producto con id ${productoId} no encontrado.`);
       }
 
-      // 3. Buscar Lote con bloqueo transaccional
       const lote = await Lote.findByPk(loteId, {
         transaction: t,
         lock: t.LOCK ? t.LOCK.UPDATE : undefined
@@ -79,7 +73,6 @@ const inventarioService = {
         throw new BadRequestError('El lote seleccionado no corresponde al producto indicado.');
       }
 
-      // 4. Validar fecha de vencimiento del lote
       const hoyStr = new Date().toISOString().slice(0, 10);
       if (lote.fechaVencimiento < hoyStr) {
         throw new BadRequestError(
@@ -87,7 +80,6 @@ const inventarioService = {
         );
       }
 
-      // 5. Validar disponibilidad de stock en el lote
       const stockLoteActual = Number(lote.stockActual);
       if (stockLoteActual < cantNum) {
         throw new BadRequestError(
@@ -95,7 +87,6 @@ const inventarioService = {
         );
       }
 
-      // 6. Validar disponibilidad en el producto global
       const stockProdActual = Number(producto.stockActual);
       if (stockProdActual < cantNum) {
         throw new BadRequestError(
@@ -103,14 +94,12 @@ const inventarioService = {
         );
       }
 
-      // 7. Calcular y actualizar nuevos stocks (redondeo a 4 decimales para evitar residuos flotantes)
       const nuevoStockLote = Number((stockLoteActual - cantNum).toFixed(4));
       const nuevoStockProd = Number((stockProdActual - cantNum).toFixed(4));
 
       await lote.update({ stockActual: nuevoStockLote }, { transaction: t });
       await producto.update({ stockActual: nuevoStockProd }, { transaction: t });
 
-      // 8. Registrar el movimiento de stock (egreso con cantidad positiva consumida)
       const movimiento = await MovimientoStock.create(
         {
           productoId: producto.id,
@@ -159,7 +148,6 @@ const inventarioService = {
     }
   },
 
-  // Obtener consumos de una consulta
   getMovimientosByConsulta: async (consultaId) => {
     return await MovimientoStock.findAll({
       where: { consultaId },
@@ -184,7 +172,6 @@ const inventarioService = {
     });
   },
 
-  // Obtener historial general de movimientos de stock
   getHistorialMovimientos: async (limite = 50) => {
     return await MovimientoStock.findAll({
       limit: Number(limite) || 50,

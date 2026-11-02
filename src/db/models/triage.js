@@ -68,7 +68,7 @@ module.exports = (sequelize, DataTypes) => {
       estado: {
         type: DataTypes.STRING,
         allowNull: false,
-        defaultValue: 'ACTIVO' // 'ACTIVO', 'FINALIZADO'
+        defaultValue: 'ACTIVO'
       },
       mascotaId: {
         type: DataTypes.INTEGER,

@@ -9,7 +9,6 @@ const {
   triageUpdateSchema
 } = require('../schema/triageSchema');
 
-// Obtener tablero Kanban de guardia / triage
 router.get(
   '/',
   authenticateToken,
@@ -17,14 +16,14 @@ router.get(
   triageController.getKanban
 );
 
-// Detalle de un ingreso
+
 router.get(
   '/:id',
   authenticateToken,
   triageController.getById
 );
 
-// Ingresar paciente al triage de guardia
+
 router.post(
   '/',
   authenticateToken,
@@ -33,7 +32,7 @@ router.post(
   triageController.create
 );
 
-// Mover tarjeta entre columnas en el Kanban
+
 router.put(
   '/:id/mover',
   authenticateToken,
@@ -42,7 +41,7 @@ router.put(
   triageController.mover
 );
 
-// Actualizar datos del triage
+
 router.put(
   '/:id',
   authenticateToken,
@@ -51,7 +50,7 @@ router.put(
   triageController.update
 );
 
-// Finalizar / dar de alta paciente de la guardia
+
 router.delete(
   '/:id',
   authenticateToken,

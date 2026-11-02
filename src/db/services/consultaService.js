@@ -102,7 +102,6 @@ const consultaService = {
         { transaction: t }
       );
 
-      // Deduccion de insumos de farmacia consumidos durante la atencion clinica
       if (Array.isArray(datos.consumosStock) && datos.consumosStock.length > 0) {
         const inventarioService = require('./inventarioService');
         for (const item of datos.consumosStock) {
@@ -303,7 +302,7 @@ const consultaService = {
       order: [['numeroVersion', 'ASC']]
     });
 
-    // Retrocompatibilidad: Si es una consulta creada antes de este sistema de versionado
+
     if (versiones.length === 0) {
       const snapshotInicial = {
         subjetivo: consulta.subjetivo,
@@ -409,7 +408,6 @@ const consultaService = {
       fechaVersion
     });
 
-    // Prohibicion estricta de borrado fisico: solo soft delete (deletedAt)
     await consulta.destroy({ force: false });
 
     return {

@@ -1,4 +1,4 @@
-﻿require('dotenv').config();
+require('dotenv').config();
 
 const express = require('express');
 const cors = require('cors');
@@ -7,7 +7,7 @@ const apiRoutes = require('./db/routers');
 const errorMiddleware = require('./db/middlewares/error.middleware');
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT;
 
 app.use(express.json());
 app.use(cors());
@@ -27,21 +27,6 @@ async function startServer() {
 
     await db.sequelize.sync();
     console.log('Modelos sincronizados con la base de datos.');
-
-    try {
-      await db.sequelize.query('ALTER TABLE consultas ADD COLUMN version INTEGER NOT NULL DEFAULT 1;');
-    } catch (e) {
-    }
-
-    try {
-      await db.sequelize.query('ALTER TABLE triages ADD COLUMN turnoId INTEGER;');
-    } catch (e) {
-    }
-
-    try {
-      await db.sequelize.query('ALTER TABLE turnos ADD COLUMN deletedAt DATETIME;');
-    } catch (e) {
-    }
 
     const rolesDefault = [
       { id: 1, nombre: 'CLIENTE', descripcion: 'Tutor responsable de pacientes' },
@@ -134,6 +119,71 @@ async function startServer() {
           fechaVencimiento: item.lote.fechaVencimiento,
           stockInicial: item.lote.stockInicial,
           stockActual: item.lote.stockActual
+        });
+      }
+    }
+
+    await db.Usuario.findOrCreate({
+      where: { email: 'dra.valeria.gomez@veterinaria.com' },
+      defaults: {
+        nombre: 'Valeria',
+        apellido: 'Gomez',
+        email: 'dra.valeria.gomez@veterinaria.com',
+        password: '123456',
+        telefono: '1145678901',
+        rolId: 2
+      }
+    });
+
+    const clientesSeed = [
+      {
+        nombre: 'Carlos',
+        apellido: 'Fernandez',
+        email: 'carlos.fernandez@gmail.com',
+        password: '123456',
+        telefono: '1134567890',
+        rolId: 1,
+        mascotas: [
+          { nombre: 'Milo', especie: 'Canino', raza: 'Golden Retriever', edad: 4, sexo: 'Macho', peso: 32.5 },
+          { nombre: 'Luna', especie: 'Felino', raza: 'Siames', edad: 2, sexo: 'Hembra', peso: 3.8 },
+          { nombre: 'Rocky', especie: 'Canino', raza: 'Bulldog Frances', edad: 3, sexo: 'Macho', peso: 12.0 }
+        ]
+      },
+      {
+        nombre: 'Mariana',
+        apellido: 'Lopez',
+        email: 'mariana.lopez@gmail.com',
+        password: '123456',
+        telefono: '1167890123',
+        rolId: 1,
+        mascotas: [
+          { nombre: 'Simba', especie: 'Felino', raza: 'Comun Europeo', edad: 5, sexo: 'Macho', peso: 4.5 },
+          { nombre: 'Bella', especie: 'Canino', raza: 'Labrador Retriever', edad: 6, sexo: 'Hembra', peso: 29.0 },
+          { nombre: 'Thor', especie: 'Canino', raza: 'Pastor Aleman', edad: 2, sexo: 'Macho', peso: 35.0 }
+        ]
+      }
+    ];
+
+    for (const cliData of clientesSeed) {
+      const [cliente] = await db.Usuario.findOrCreate({
+        where: { email: cliData.email },
+        defaults: {
+          nombre: cliData.nombre,
+          apellido: cliData.apellido,
+          email: cliData.email,
+          password: cliData.password,
+          telefono: cliData.telefono,
+          rolId: cliData.rolId
+        }
+      });
+
+      for (const m of cliData.mascotas) {
+        await db.Mascota.findOrCreate({
+          where: { nombre: m.nombre, usuarioId: cliente.id },
+          defaults: {
+            ...m,
+            usuarioId: cliente.id
+          }
         });
       }
     }

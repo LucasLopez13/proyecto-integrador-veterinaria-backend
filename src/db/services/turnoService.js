@@ -182,8 +182,6 @@ const turnoService = {
         );
       }
 
-      // El cliente puede reprogramar o cancelar, pero no cambiar
-      // al usuario ni a la mascota asociados al turno.
       delete cambios.usuarioId;
       delete cambios.mascotaId;
     }
