@@ -33,7 +33,7 @@ const carnetVacunacionService = {
             typeof token !== 'string' ||
             !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(token)
         ) {
-            throw new BadRequestError('El token del carnet no es válido');
+            throw new BadRequestError('El token del carnet no es valido');
         }
 
         const carnet = await CarnetVacunacion.findOne({
@@ -49,7 +49,7 @@ const carnetVacunacionService = {
 
 
         if (!carnet || !carnet.mascota) {
-            throw new NotFoundError('Carnet de vacunación no encontrado');
+            throw new NotFoundError('Carnet de vacunacion no encontrado');
         }
 
         const registros = await RegistroSanitario.findAll({

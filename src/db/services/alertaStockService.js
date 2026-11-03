@@ -10,7 +10,7 @@ const alertaStockService = {
         if (!Number.isInteger(dias) || dias < 0 || dias > 365) {
             const { BadRequestError } = require('../utils/customErrors');
             throw new BadRequestError(
-                'Los días para alertar vencimientos deben ser un entero entre 0 y 365'
+                'Los dias para alertar vencimientos deben ser un entero entre 0 y 365'
             );
         }
 
@@ -64,7 +64,7 @@ const alertaStockService = {
             unidadMedida: producto.unidadMedida,
             mensaje: Number(producto.stockActual) === 0
                 ? `El producto ${producto.nombre} no tiene stock disponible`
-                : `El producto ${producto.nombre} alcanzó su stock mínimo`
+                : `El producto ${producto.nombre} alcanzo su stock minimo`
         }));
 
         const alertasVencimiento = lotes.map((lote) => {
@@ -82,8 +82,8 @@ const alertaStockService = {
                 stockActual: lote.stockActual,
                 unidadMedida: lote.producto?.unidadMedida,
                 mensaje: vencido
-                    ? `El lote ${lote.numeroLote} está vencido`
-                    : `El lote ${lote.numeroLote} está próximo a vencer`
+                    ? `El lote ${lote.numeroLote} esta vencido`
+                    : `El lote ${lote.numeroLote} esta proximo a vencer`
             };
         });
 

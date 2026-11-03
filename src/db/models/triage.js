@@ -92,7 +92,7 @@ module.exports = (sequelize, DataTypes) => {
       hooks: {
         beforeDestroy: (instance, options) => {
           if (options && options.force) {
-            throw new Error('Prohibición estricta de borrados físicos sobre registros médicos (solo soft delete)');
+            throw new Error('Prohibicion estricta de borrados fisicos sobre registros medicos (solo soft delete)');
           }
         }
       }

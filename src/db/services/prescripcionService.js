@@ -1,8 +1,15 @@
-
 const db = require('../models');
-const {Prescripcion,Consulta,Usuario} = db;
+const { Prescripcion, Consulta, Usuario } = db;
 
-const {NotFoundError,ForbiddenError,BadRequestError} = require('../utils/customErrors');
+const { NotFoundError, ForbiddenError, BadRequestError } = require('../utils/customErrors');
+
+const obtenerRol = (usuario) => {
+  if (!usuario) return '';
+  if (typeof usuario.rol === 'object' && usuario.rol?.nombre) {
+    return String(usuario.rol.nombre).toUpperCase().trim();
+  }
+  return String(usuario.rol || usuario.role || '').toUpperCase().trim();
+};
 
 const prescripcionService = {
   create: async (datos, usuario) => {
@@ -13,7 +20,7 @@ const prescripcionService = {
       );
     }
 
-    const rol = String(usuario.rol?.nombre || '').toUpperCase();
+    const rol = obtenerRol(usuario);
     if (
       rol !== 'ADMIN' &&
       consulta.veterinarioId !== usuario.id
@@ -33,10 +40,10 @@ const prescripcionService = {
       datos.unidadConcentracion.trim().toLowerCase();
 
     if (unidadDosis === 'mg/kg') {
-      dosisTotal = dosisIndicada * pesoKg;
+      dosisTotal = Number((dosisIndicada * pesoKg).toFixed(2));
 
       if (unidadConcentracion === 'mg/ml') {
-        volumenMl = dosisTotal / concentracion;
+        volumenMl = Number((dosisTotal / concentracion).toFixed(2));
       }
     }
 
@@ -66,7 +73,7 @@ const prescripcionService = {
         `Consulta con id ${consultaId} no encontrada`
       );
     }
-    const rol = String(usuario.rol?.nombre || '').toUpperCase();
+    const rol = obtenerRol(usuario);
     if (
       rol === 'CLIENTE' &&
       consulta.mascotaId
@@ -103,10 +110,10 @@ const prescripcionService = {
 
     if (!prescripcion) {
       throw new NotFoundError(
-        `Prescripción con id ${id} no encontrada`
+        `Prescripcion con id ${id} no encontrada`
       );
     }
-    const rol = String(usuario.rol?.nombre || '').toUpperCase();
+    const rol = obtenerRol(usuario);
     const esAdmin = rol === 'ADMIN';
 
     if (
@@ -120,7 +127,7 @@ const prescripcionService = {
 
     if (prescripcion.confirmadaPorProfesional) {
       throw new BadRequestError(
-        'Esta prescripción ya fue confirmada'
+        'Esta prescripcion ya fue confirmada'
       );
     }
 

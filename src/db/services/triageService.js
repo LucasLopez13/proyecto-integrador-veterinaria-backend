@@ -73,7 +73,7 @@ const triageService = {
               raza: t.mascota.raza || null,
               nombreTutor: tutorNombre,
               telefonoTutor: telefono,
-              motivo: t.motivo || 'Consulta médica programada',
+              motivo: t.motivo || 'Consulta medica programada',
               fechaLlegada: t.fecha || new Date(),
               estado: 'ACTIVO',
               mascotaId: t.mascotaId,
@@ -182,7 +182,7 @@ const triageService = {
 
   mover: async (id, nuevaColumna) => {
     if (!COLUMNAS_VALIDAS.includes(nuevaColumna)) {
-      throw new BadRequestError(`Columna '${nuevaColumna}' no válida.`);
+      throw new BadRequestError(`Columna '${nuevaColumna}' no valida.`);
     }
 
     const item = await Triage.findByPk(id);

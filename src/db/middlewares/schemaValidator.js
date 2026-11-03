@@ -11,7 +11,7 @@ const schemaValidator = (schema) => {
       const summary = errorDetails.map((d) => d.message).join('. ');
 
       return res.status(400).json({
-        message: `Error de validación: ${summary}`,
+        message: `Error de validacion: ${summary}`,
         errors: errorDetails
       });
     }

@@ -1,4 +1,3 @@
-
 const express = require('express');
 const router = express.Router();
 
@@ -9,11 +8,6 @@ const {
   hasRole
 } = require('../middlewares/auth.middleware');
 
-// ==========================================
-// CATÁLOGO DE SERVICIOS
-// ==========================================
-
-// Listar servicios disponibles
 router.get(
   '/servicios',
   authenticateToken,
@@ -21,31 +15,27 @@ router.get(
   facturacionController.listarServicios
 );
 
-// Crear servicio: solamente administrador
 router.post(
   '/servicios',
   authenticateToken,
-  hasRole('admin'),
+  hasRole('admin', 'profesional'),
   facturacionController.crearServicio
 );
 
-// Actualizar servicio: solamente administrador
 router.put(
   '/servicios/:id',
   authenticateToken,
-  hasRole('admin'),
+  hasRole('admin', 'profesional'),
   facturacionController.actualizarServicio
 );
 
-// Activar o desactivar servicio: solamente administrador
 router.patch(
   '/servicios/:id/estado',
   authenticateToken,
-  hasRole('admin'),
+  hasRole('admin', 'profesional'),
   facturacionController.cambiarEstadoServicio
 );
 
-// Listar productos disponibles para facturación
 router.get(
   '/productos',
   authenticateToken,
@@ -53,39 +43,41 @@ router.get(
   facturacionController.listarProductos
 );
 
-// ==========================================
-// ORDENES DE FACTURACION
-// ==========================================
+router.get(
+  '/mis-ordenes',
+  authenticateToken,
+  hasRole('cliente', 'profesional', 'recepcion', 'admin'),
+  facturacionController.listarMisOrdenes
+);
 
-// Listar todas las órdenes
 router.get(
   '/ordenes',
   authenticateToken,
-  hasRole('recepcion', 'admin'),
+  hasRole('profesional', 'recepcion', 'admin'),
   facturacionController.listarOrdenes
 );
 
-// Obtener una orden por ID
 router.get(
   '/ordenes/:id',
   authenticateToken,
-  hasRole('recepcion', 'admin'),
+  hasRole('profesional', 'recepcion', 'admin'),
   facturacionController.obtenerOrden
 );
 
-// Consultas pendientes de facturación
+router.patch(
+  '/ordenes/:id/estado',
+  authenticateToken,
+  hasRole('profesional', 'recepcion', 'admin'),
+  facturacionController.actualizarEstadoOrden
+);
+
 router.get(
   '/consultas-pendientes',
   authenticateToken,
-  hasRole('recepcion', 'admin'),
+  hasRole('profesional', 'recepcion', 'admin'),
   facturacionController.listarConsultasPendientes
 );
 
-// ==========================================
-// CONCEPTOS DE CONSULTA
-// ==========================================
-
-// Consultar conceptos
 router.get(
   '/consultas/:consultaId/conceptos',
   authenticateToken,
@@ -93,31 +85,24 @@ router.get(
   facturacionController.listarConceptos
 );
 
-// Agregar concepto: veterinario o administrador
 router.post(
   '/consultas/:consultaId/conceptos',
   authenticateToken,
-  hasRole('profesional', 'admin'),
+  hasRole('profesional', 'admin', 'recepcion'),
   facturacionController.agregarConcepto
 );
 
-// Eliminar concepto: veterinario o administrador
 router.delete(
   '/consultas/:consultaId/conceptos/:conceptoId',
   authenticateToken,
-  hasRole('profesional', 'admin'),
+  hasRole('profesional', 'admin', 'recepcion'),
   facturacionController.eliminarConcepto
 );
 
-// ==========================================
-// ORDEN DE FACTURACIÓN
-// ==========================================
-
-// Generar orden: recepción o administrador
 router.post(
   '/consultas/:consultaId/orden-facturacion',
   authenticateToken,
-  hasRole('recepcion', 'admin'),
+  hasRole('profesional', 'recepcion', 'admin'),
   facturacionController.generarOrden
 );
 

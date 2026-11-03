@@ -1,5 +1,6 @@
+const { Op } = require('sequelize');
 const db = require('../models');
-const { Pago, Turno, Mascota, Usuario } = db;
+const { Pago, Turno, Mascota, Usuario, Consulta, OrdenFacturacion } = db;
 const {
   NotFoundError,
   ForbiddenError,
@@ -11,11 +12,11 @@ const normalizarRol = (usuario) => {
   if (typeof usuario.rol === 'object' && usuario.rol?.nombre) {
     return usuario.rol.nombre.toLowerCase().trim();
   }
-  return String(usuario.rol || '').toLowerCase().trim();
+  return String(usuario.rol || usuario.role || '').toLowerCase().trim();
 };
 
 const esPersonal = (rol) =>
-  ['profesional', 'admin'].includes(rol);
+  ['profesional', 'admin', 'recepcion'].includes(rol);
 
 const pagoService = {
   getAll: async (usuario) => {
@@ -43,11 +44,42 @@ const pagoService = {
       where: { usuarioId: usuario.id },
       attributes: ['id']
     });
-
     const idsTurnos = turnos.map((turno) => turno.id);
 
+    const mascotas = await Mascota.findAll({
+      where: { usuarioId: usuario.id },
+      attributes: ['id']
+    });
+    const idsMascotas = mascotas.map((m) => m.id);
+
+    let idsOrdenes = [];
+    if (idsMascotas.length > 0 && OrdenFacturacion && Consulta) {
+      const ordenesCliente = await OrdenFacturacion.findAll({
+        include: [{
+          model: Consulta,
+          as: 'consulta',
+          where: { mascotaId: idsMascotas },
+          required: true
+        }],
+        attributes: ['id']
+      });
+      idsOrdenes = ordenesCliente.map((o) => o.id);
+    }
+
+    const condiciones = [];
+    if (idsTurnos.length > 0) {
+      condiciones.push({ turnoId: idsTurnos });
+    }
+    if (idsOrdenes.length > 0) {
+      condiciones.push({ presupuestoId: idsOrdenes });
+    }
+
+    if (condiciones.length === 0) {
+      return [];
+    }
+
     return Pago.findAll({
-      where: { turnoId: idsTurnos.length ? idsTurnos : null },
+      where: { [Op.or]: condiciones },
       include: [{ model: Turno, as: 'turno' }],
       order: [['createdAt', 'DESC']]
     });
@@ -55,12 +87,12 @@ const pagoService = {
 
   create: async (datos, usuario) => {
     const rol = normalizarRol(usuario);
-    const tieneTurno = datos.turnoId !== undefined;
-    const tienePresupuesto = datos.presupuestoId !== undefined;
+    const tieneTurno = datos.turnoId !== undefined && datos.turnoId !== null;
+    const tienePresupuesto = datos.presupuestoId !== undefined && datos.presupuestoId !== null;
 
-    if (tieneTurno === tienePresupuesto) {
+    if (!tieneTurno && !tienePresupuesto) {
       throw new BadRequestError(
-        'El pago debe asociarse a un turno o a un presupuesto, pero no a ambos.'
+        'El pago debe asociarse a un turno o a una orden de facturacion.'
       );
     }
 
@@ -70,35 +102,81 @@ const pagoService = {
       );
     }
 
-    if (tienePresupuesto) {
-      throw new BadRequestError(
-        'La gestión de pagos de presupuestos estará disponible cuando se implemente el módulo de presupuestos.'
-      );
+    let turnoIdFinal = tieneTurno ? Number(datos.turnoId) : null;
+    let presupuestoIdFinal = tienePresupuesto ? Number(datos.presupuestoId) : null;
+
+    if (tienePresupuesto && OrdenFacturacion) {
+      const orden = await OrdenFacturacion.findByPk(presupuestoIdFinal, {
+        include: [{
+          model: Consulta,
+          as: 'consulta',
+          include: [{ model: Mascota, as: 'mascota' }]
+        }]
+      });
+
+      if (!orden) {
+        throw new NotFoundError('La orden de facturacion indicada no existe.');
+      }
+
+      if (!esPersonal(rol) && orden.consulta?.mascota?.usuarioId !== usuario.id) {
+        throw new ForbiddenError(
+          'No puedes registrar pagos para ordenes de facturacion de otro usuario.'
+        );
+      }
+
+      if (!turnoIdFinal && orden.consulta?.turnoId) {
+        turnoIdFinal = orden.consulta.turnoId;
+      }
     }
 
-    const turno = await Turno.findByPk(datos.turnoId, {
-      include: [{ model: Mascota, as: 'mascota' }]
-    });
+    if (turnoIdFinal) {
+      const turno = await Turno.findByPk(turnoIdFinal, {
+        include: [{ model: Mascota, as: 'mascota' }]
+      });
 
-    if (!turno) {
-      throw new NotFoundError('El turno indicado no existe.');
+      if (!turno) {
+        throw new NotFoundError('El turno indicado no existe.');
+      }
+
+      if (!esPersonal(rol) && turno.usuarioId !== usuario.id) {
+        throw new ForbiddenError(
+          'No puedes registrar pagos para turnos de otro usuario.'
+        );
+      }
+
+      if (!presupuestoIdFinal && Consulta && OrdenFacturacion) {
+        const consultaTurno = await Consulta.findOne({
+          where: { turnoId: turno.id }
+        });
+        if (consultaTurno) {
+          const ordenTurno = await OrdenFacturacion.findOne({
+            where: { consultaId: consultaTurno.id }
+          });
+          if (ordenTurno) {
+            presupuestoIdFinal = ordenTurno.id;
+          }
+        }
+      }
     }
 
-    if (!esPersonal(rol) && turno.usuarioId !== usuario.id) {
-      throw new ForbiddenError(
-        'No puedes registrar pagos para turnos de otro usuario.'
-      );
-    }
+    const estadoInicial = esPersonal(rol) ? (datos.estado || 'pendiente') : 'pendiente';
 
     const pago = await Pago.create({
       monto: datos.monto,
       concepto: datos.concepto,
       metodo: datos.metodo,
-      estado: esPersonal(rol) ? (datos.estado || 'pendiente') : 'pendiente',
-      turnoId: turno.id,
-      presupuestoId: null,
+      estado: estadoInicial,
+      turnoId: turnoIdFinal,
+      presupuestoId: presupuestoIdFinal,
       observaciones: datos.observaciones || null
     });
+
+    if (estadoInicial === 'aprobado' && presupuestoIdFinal && OrdenFacturacion) {
+      const orden = await OrdenFacturacion.findByPk(presupuestoIdFinal);
+      if (orden && orden.estado === 'pendiente') {
+        await orden.update({ estado: 'pagada' });
+      }
+    }
 
     return Pago.findByPk(pago.id, {
       include: [{ model: Turno, as: 'turno' }]
@@ -116,13 +194,26 @@ const pagoService = {
 
     const rol = normalizarRol(usuario);
 
-    if (
-      !esPersonal(rol) &&
-      (!pago.turno || pago.turno.usuarioId !== usuario.id)
-    ) {
-      throw new ForbiddenError(
-        'No tienes permiso para consultar este pago.'
-      );
+    if (!esPersonal(rol)) {
+      let autorizado = Boolean(pago.turno && pago.turno.usuarioId === usuario.id);
+      if (!autorizado && pago.presupuestoId && OrdenFacturacion) {
+        const orden = await OrdenFacturacion.findByPk(pago.presupuestoId, {
+          include: [{
+            model: Consulta,
+            as: 'consulta',
+            include: [{ model: Mascota, as: 'mascota' }]
+          }]
+        });
+        if (orden?.consulta?.mascota?.usuarioId === usuario.id) {
+          autorizado = true;
+        }
+      }
+
+      if (!autorizado) {
+        throw new ForbiddenError(
+          'No tienes permiso para consultar este pago.'
+        );
+      }
     }
 
     return pago;
@@ -144,6 +235,29 @@ const pagoService = {
     }
 
     await pago.update({ estado });
+
+    if (estado === 'aprobado' && OrdenFacturacion) {
+      let ordenVinculada = null;
+
+      if (pago.presupuestoId) {
+        ordenVinculada = await OrdenFacturacion.findByPk(pago.presupuestoId);
+      }
+
+      if (!ordenVinculada && pago.turnoId && Consulta) {
+        const consultaTurno = await Consulta.findOne({
+          where: { turnoId: pago.turnoId }
+        });
+        if (consultaTurno) {
+          ordenVinculada = await OrdenFacturacion.findOne({
+            where: { consultaId: consultaTurno.id }
+          });
+        }
+      }
+
+      if (ordenVinculada && ordenVinculada.estado === 'pendiente') {
+        await ordenVinculada.update({ estado: 'pagada' });
+      }
+    }
 
     return pago;
   }

@@ -67,10 +67,34 @@ const consultaService = {
             'El turno seleccionado no corresponde a la mascota indicada'
           );
         }
+      } else {
+        turnoAsociado = await Turno.findOne({
+          where: {
+            mascotaId: Number(datos.mascotaId),
+            estado: ['pendiente', 'confirmado']
+          },
+          order: [['fecha', 'ASC']],
+          transaction: t
+        });
+      }
 
+      if (turnoAsociado) {
         await turnoAsociado.update(
           { estado: 'atendido' },
           { transaction: t }
+        );
+      }
+
+      if (db.Triage) {
+        await db.Triage.update(
+          { estado: 'atendido' },
+          {
+            where: {
+              mascotaId: Number(datos.mascotaId),
+              estado: ['en_espera', 'en_atencion']
+            },
+            transaction: t
+          }
         );
       }
 
@@ -93,7 +117,7 @@ const consultaService = {
           observaciones: datos.observaciones || null,
           mascotaId: datos.mascotaId,
           veterinarioId: usuario.id,
-          turnoId: datos.turnoId || null
+          turnoId: turnoAsociado ? turnoAsociado.id : (datos.turnoId || null)
         },
         { transaction: t }
       );

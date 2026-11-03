@@ -18,7 +18,7 @@ const turnoUpdateSchema = Joi.object({
 
 const turnoEstadoSchema = Joi.object({
   estado: Joi.string()
-    .valid('confirmado', 'cancelado', 'completado')
+    .valid('pendiente', 'confirmado', 'cancelado', 'completado', 'atendido')
     .required()
 });
 

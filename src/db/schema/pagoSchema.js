@@ -1,4 +1,4 @@
-﻿const Joi = require('joi');
+const Joi = require('joi');
 
 const pagoCreateSchema = Joi.object({
   monto: Joi.number().positive().precision(2).required(),
@@ -9,21 +9,21 @@ const pagoCreateSchema = Joi.object({
   estado: Joi.string()
     .valid('pendiente', 'aprobado', 'rechazado')
     .default('pendiente'),
-  turnoId: Joi.number().integer().positive().optional(),
-  presupuestoId: Joi.number().integer().positive().optional(),
+  turnoId: Joi.number().integer().positive().allow(null).optional(),
+  presupuestoId: Joi.number().integer().positive().allow(null).optional(),
   observaciones: Joi.string().allow('', null).optional()
 }).custom((pago, helpers) => {
-  const tieneTurno = pago.turnoId !== undefined;
-  const tienePresupuesto = pago.presupuestoId !== undefined;
+  const tieneTurno = pago.turnoId !== undefined && pago.turnoId !== null;
+  const tienePresupuesto = pago.presupuestoId !== undefined && pago.presupuestoId !== null;
 
-  if (tieneTurno === tienePresupuesto) {
+  if (!tieneTurno && !tienePresupuesto) {
     return helpers.error('any.custom');
   }
 
   return pago;
-}, 'Validación de asociación del pago')
+}, 'Validacion de asociacion del pago')
 .messages({
-  'any.custom': 'El pago debe estar asociado a un turno o a un presupuesto, pero no a ambos.'
+  'any.custom': 'El pago debe estar asociado a un turno o a una orden de facturacion.'
 });
 
 module.exports = { pagoCreateSchema };

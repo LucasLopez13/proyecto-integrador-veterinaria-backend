@@ -14,7 +14,7 @@ class BadRequestError extends AppError {
 }
 
 class UnauthorizedError extends AppError {
-  constructor(message = 'Credenciales inválidas, intente nuevamente') {
+  constructor(message = 'Credenciales invalidas, intente nuevamente') {
     super(message, 401);
   }
 }
