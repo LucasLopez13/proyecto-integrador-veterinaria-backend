@@ -9,7 +9,7 @@ const {
   consultaAnulacionSchema
 } = require('../schema/consultaSchema');
 
-// Crear consulta SOAP inicial (Versión 1)
+
 router.post(
   '/',
   authenticateToken,
@@ -18,7 +18,7 @@ router.post(
   consultaController.create
 );
 
-// Enmendar/modificar consulta existente (crea una nueva versión histórica inmutable)
+
 router.put(
   '/:id',
   authenticateToken,
@@ -27,14 +27,14 @@ router.put(
   consultaController.update
 );
 
-// Consultar historial de versiones y auditoría legal de una consulta
+
 router.get(
   '/:id/versiones',
   authenticateToken,
   consultaController.getVersiones
 );
 
-// Anulación lógica de consulta médica (soft delete con registro en auditoría, sin borrado físico)
+
 router.delete(
   '/:id',
   authenticateToken,
@@ -43,7 +43,7 @@ router.delete(
   consultaController.delete
 );
 
-// Listar todas las consultas
+
 router.get(
   '/',
   authenticateToken,
@@ -51,14 +51,14 @@ router.get(
   consultaController.getAll
 );
 
-// Listar consultas de una mascota
+
 router.get(
   '/mascota/:mascotaId',
   authenticateToken,
   consultaController.getByMascotaId
 );
 
-// Detalle de una consulta
+
 router.get(
   '/:id',
   authenticateToken,

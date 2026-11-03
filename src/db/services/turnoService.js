@@ -1,6 +1,6 @@
 
 const db = require('../models');
-const { Turno, Mascota, Usuario } = db;
+const { Turno, Mascota, Usuario, Pago } = db;
 const {
   NotFoundError,
   ForbiddenError,
@@ -18,7 +18,7 @@ const getRolNombre = (usuario) => {
 };
 
 const esProfesional = (rol) =>
-  ['profesional', 'veterinario', 'admin'].includes(rol);
+  ['profesional', 'admin'].includes(rol);
 
 const fechaEnElPasado = (fecha) =>
   fecha && new Date(fecha).getTime() < Date.now() - 5 * 60 * 1000;
@@ -33,6 +33,7 @@ const turnoService = {
     const baseOptions = {
       include: [
         { model: Mascota, as: 'mascota' },
+        { model: Pago, as: 'pagos' },
         ...(puedeVerTodos
           ? [{
             model: Usuario,
@@ -181,8 +182,6 @@ const turnoService = {
         );
       }
 
-      // El cliente puede reprogramar o cancelar, pero no cambiar
-      // al usuario ni a la mascota asociados al turno.
       delete cambios.usuarioId;
       delete cambios.mascotaId;
     }

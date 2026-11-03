@@ -1,13 +1,13 @@
 const jwt = require('jsonwebtoken');
-const { Usuario } = require('../models');
+const db = require('../models');
+const { Usuario, Rol } = db;
 
 const normalizarRol = (rol) => {
   const nombre = typeof rol === 'object' && rol?.nombre
     ? rol.nombre
     : String(rol || '');
 
-  const normalizado = nombre.toLowerCase().trim();
-  return normalizado === 'veterinario' ? 'profesional' : normalizado;
+  return nombre.toLowerCase().trim();
 };
 
 const authenticateToken = async (req, res, next) => {
@@ -22,11 +22,13 @@ const authenticateToken = async (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const usuario = await Usuario.findByPk(decoded.id);
+    const usuario = await Usuario.findByPk(decoded.id, {
+      include: [{ model: Rol, as: 'rol' }]
+    });
 
     if (!usuario) {
       return res.status(401).json({
-        message: 'Usuario no encontrado o sesión inválida'
+        message: 'Usuario no encontrado o sesion invalida'
       });
     }
 
@@ -35,14 +37,14 @@ const authenticateToken = async (req, res, next) => {
   } catch (error) {
     if (error.name === 'TokenExpiredError') {
       return res.status(401).json({
-        message: 'Sesión expirada. Por favor inicie sesión nuevamente'
+        message: 'Sesion expirada. Por favor inicie sesion nuevamente'
       });
     }
 
-    console.error('Error de autenticación:', error.message);
+    console.error('Error de autenticacion:', error.message);
 
     return res.status(403).json({
-      message: 'Token de autenticación inválido'
+      message: 'Token de autenticacion invalido'
     });
   }
 };
@@ -51,7 +53,7 @@ const hasRole = (...rolesPermitidos) => {
   return (req, res, next) => {
     if (!req.user) {
       return res.status(401).json({
-        message: 'Acceso no autorizado: Se requiere inicio de sesión'
+        message: 'Acceso no autorizado: Se requiere inicio de sesion'
       });
     }
 
@@ -60,7 +62,7 @@ const hasRole = (...rolesPermitidos) => {
 
     if (!rolesNormalizados.includes(rolUsuario)) {
       return res.status(403).json({
-        message: `Acceso denegado. Tu rol actual es '${rolUsuario}'. No tienes permisos suficientes para realizar esta acción`
+        message: `Acceso denegado. Tu rol actual es '${rolUsuario}'. No tienes permisos suficientes para realizar esta accion`
       });
     }
 
@@ -74,3 +76,4 @@ module.exports = {
   hasAuthority: hasRole,
   requireRole: hasRole
 };
+

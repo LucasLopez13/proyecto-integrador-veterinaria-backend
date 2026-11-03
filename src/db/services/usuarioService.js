@@ -1,15 +1,20 @@
-const { Usuario, Mascota, Turno } = require('../models');
+const db = require('../models');
+const { Usuario, Mascota, Turno, Rol } = db;
 const { NotFoundError, ConflictError } = require('../utils/customErrors');
 
-const normalizarRol = (rol) => {
-  const nombre = String(rol || 'cliente').toLowerCase().trim();
-  return nombre === 'veterinario' ? 'profesional' : nombre;
+const resolverRolId = async (rol) => {
+  if (!rol) return 1;
+  if (typeof rol === 'number') return rol;
+  const nombre = String(rol).trim().toUpperCase();
+  const rolDb = await Rol.findOne({ where: { nombre } });
+  return rolDb ? rolDb.id : 1;
 };
 
 const usuarioService = {
   getAll: async () => {
     return await Usuario.findAll({
-      attributes: { exclude: ['password'] }
+      attributes: { exclude: ['password'] },
+      include: [{ model: Rol, as: 'rol' }]
     });
   },
 
@@ -17,6 +22,7 @@ const usuarioService = {
     const usuario = await Usuario.findByPk(id, {
       attributes: { exclude: ['password'] },
       include: [
+        { model: Rol, as: 'rol' },
         { model: Mascota, as: 'mascotas' },
         { model: Turno, as: 'turnos' }
       ]
@@ -29,7 +35,7 @@ const usuarioService = {
     return usuario;
   },
 
-  create: async ({ nombre, apellido, email, password, telefono, rol }) => {
+  create: async ({ nombre, apellido, email, password, telefono, rol, rolId }) => {
     const emailNormalizado = email.toLowerCase().trim();
 
     const existe = await Usuario.findOne({
@@ -42,16 +48,23 @@ const usuarioService = {
       );
     }
 
+    const finalRolId = rolId || (rol ? await resolverRolId(rol) : 1);
+
     const usuario = await Usuario.create({
       nombre: nombre.trim(),
       apellido: apellido.trim(),
       email: emailNormalizado,
       password,
       telefono: telefono ? telefono.trim() : null,
-      rol: normalizarRol(rol)
+      rolId: finalRolId
     });
 
-    return usuario.toJSON();
+    const usuarioConRol = await Usuario.findByPk(usuario.id, {
+      attributes: { exclude: ['password'] },
+      include: [{ model: Rol, as: 'rol' }]
+    });
+
+    return usuarioConRol.toJSON();
   },
 
   update: async (id, datosActualizados) => {
@@ -61,7 +74,7 @@ const usuarioService = {
       throw new NotFoundError(`Usuario con id ${id} no encontrado`);
     }
 
-    const { nombre, apellido, email, password, telefono, rol } = datosActualizados;
+    const { nombre, apellido, email, password, telefono, rol, rolId } = datosActualizados;
 
     if (email && email.toLowerCase().trim() !== usuario.email) {
       const emailNormalizado = email.toLowerCase().trim();
@@ -86,8 +99,10 @@ const usuarioService = {
       usuario.telefono = telefono ? telefono.trim() : null;
     }
 
-    if (rol !== undefined) {
-      usuario.rol = normalizarRol(rol);
+    if (rolId !== undefined) {
+      usuario.rolId = rolId;
+    } else if (rol !== undefined) {
+      usuario.rolId = await resolverRolId(rol);
     }
 
     if (password) {
@@ -96,7 +111,12 @@ const usuarioService = {
 
     await usuario.save();
 
-    return usuario.toJSON();
+    const usuarioConRol = await Usuario.findByPk(usuario.id, {
+      attributes: { exclude: ['password'] },
+      include: [{ model: Rol, as: 'rol' }]
+    });
+
+    return usuarioConRol.toJSON();
   },
 
   delete: async (id) => {

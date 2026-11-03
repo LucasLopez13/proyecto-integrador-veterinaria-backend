@@ -30,7 +30,7 @@ const mascotaService = {
         const rol = getRolNombre(usuario);
         const usuarioId = typeof usuario === 'object' ? usuario.id : usuario;
 
-        if (rol === 'profesional' || rol === 'admin' || rol === 'recepcion') {
+        if (rol === 'profesional' || rol === 'admin') {
             return await Mascota.findAll({
                 include: [{
                     model: Usuario,

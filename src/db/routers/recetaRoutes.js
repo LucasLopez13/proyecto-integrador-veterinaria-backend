@@ -1,41 +1,41 @@
 const express = require('express');
 const recetaController = require('../controllers/recetaController');
-const { authenticateToken, requireRole } = require('../middlewares/auth.middleware');
+const { authenticateToken, hasRole } = require('../middlewares/auth.middleware');
 
 const router = express.Router();
 
 router.get(
   '/',
   authenticateToken,
-  requireRole('cliente'),
+  hasRole('cliente'),
   recetaController.getAll
 );
 
 router.get(
   '/:id',
   authenticateToken,
-  requireRole('cliente'),
+  hasRole('cliente'),
   recetaController.getById
 );
 
 router.post(
   '/',
   authenticateToken,
-  requireRole('veterinario'),
+  hasRole('profesional', 'admin'),
   recetaController.create
 );
 
 router.put(
   '/:id',
   authenticateToken,
-  requireRole('veterinario'),
+  hasRole('profesional', 'admin'),
   recetaController.update
 );
 
 router.delete(
   '/:id',
   authenticateToken,
-  requireRole('veterinario'),
+  hasRole('profesional', 'admin'),
   recetaController.remove
 );
 

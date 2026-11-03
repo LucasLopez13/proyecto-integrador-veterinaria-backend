@@ -1,10 +1,20 @@
 const jwt = require('jsonwebtoken');
-const { Usuario } = require('../models');
+const db = require('../models');
+const { Usuario, Rol } = db;
 const { ConflictError, UnauthorizedError } = require('../utils/customErrors');
 
-const normalizarRol = (rol) => {
-  const nombre = String(rol || 'cliente').toLowerCase().trim();
-  return nombre === 'veterinario' ? 'profesional' : nombre;
+const normalizarRol = (usuario) => {
+  const rolVal = usuario?.rol?.nombre || usuario?.rol || '';
+  return String(rolVal || 'cliente').toLowerCase().trim();
+};
+
+const resolverRolId = async (rol, rolId) => {
+  if (rolId) return Number(rolId);
+  if (!rol) return 1;
+  if (typeof rol === 'number') return rol;
+  const nombre = String(rol).trim().toUpperCase();
+  const rolDb = await Rol.findOne({ where: { nombre } });
+  return rolDb ? rolDb.id : 1;
 };
 
 const generateToken = (usuario) => {
@@ -12,7 +22,7 @@ const generateToken = (usuario) => {
     {
       id: usuario.id,
       email: usuario.email,
-      rol: normalizarRol(usuario.rol),
+      rol: normalizarRol(usuario),
       nombre: usuario.nombre,
       apellido: usuario.apellido
     },
@@ -22,7 +32,7 @@ const generateToken = (usuario) => {
 };
 
 const authService = {
-  register: async ({ nombre, apellido, email, password, telefono }) => {
+  register: async ({ nombre, apellido, email, password, telefono, rol, rolId }) => {
     const emailNormalizado = email.toLowerCase().trim();
 
     const usuarioExistente = await Usuario.findOne({
@@ -30,24 +40,29 @@ const authService = {
     });
 
     if (usuarioExistente) {
-      throw new ConflictError('El correo electrónico ingresado ya se encuentra registrado');
+      throw new ConflictError('El correo electronico ingresado ya se encuentra registrado');
     }
 
-    // El registro público no debe permitir elegir el rol profesional.
+    const finalRolId = await resolverRolId(rol, rolId);
+
     const nuevoUsuario = await Usuario.create({
       nombre: nombre.trim(),
       apellido: apellido.trim(),
       email: emailNormalizado,
       password,
       telefono: telefono ? telefono.trim() : null,
-      rol: 'cliente'
+      rolId: finalRolId
     });
 
-    const token = generateToken(nuevoUsuario);
+    const usuarioConRol = await Usuario.findByPk(nuevoUsuario.id, {
+      include: [{ model: Rol, as: 'rol' }]
+    });
+
+    const token = generateToken(usuarioConRol);
 
     return {
       message: 'Usuario registrado exitosamente',
-      user: nuevoUsuario.toJSON(),
+      user: usuarioConRol.toJSON(),
       token
     };
   },
@@ -56,21 +71,22 @@ const authService = {
     const emailNormalizado = email.toLowerCase().trim();
 
     const usuario = await Usuario.findOne({
-      where: { email: emailNormalizado }
+      where: { email: emailNormalizado },
+      include: [{ model: Rol, as: 'rol' }]
     });
 
     if (!usuario) {
-      throw new UnauthorizedError('Credenciales inválidas, intente nuevamente');
+      throw new UnauthorizedError('Credenciales invalidas, intente nuevamente');
     }
 
     const passwordValida = await usuario.validarPassword(password);
 
     if (!passwordValida) {
-      throw new UnauthorizedError('Credenciales inválidas, intente nuevamente');
+      throw new UnauthorizedError('Credenciales invalidas, intente nuevamente');
     }
 
     return {
-      message: 'Inicio de sesión exitoso',
+      message: 'Inicio de sesion exitoso',
       user: usuario.toJSON(),
       token: generateToken(usuario)
     };
@@ -78,3 +94,4 @@ const authService = {
 };
 
 module.exports = authService;
+

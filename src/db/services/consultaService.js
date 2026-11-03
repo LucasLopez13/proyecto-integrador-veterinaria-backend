@@ -17,105 +17,131 @@ function generarHashVersion({ consultaId, numeroVersion, autorId, tipoAccion, fe
 
 const consultaService = {
   create: async (datos, usuario) => {
-    const mascota = await Mascota.findByPk(datos.mascotaId);
-    if (!mascota) {
-      throw new NotFoundError(`La mascota con id ${datos.mascotaId} no existe`);
-    }
-
-    let turnoAsociado = null;
-    if (datos.turnoId) {
-      turnoAsociado = await Turno.findByPk(datos.turnoId);
-      if (!turnoAsociado) {
-        throw new NotFoundError(`El turno con id ${datos.turnoId} no existe`);
+    return await db.sequelize.transaction(async (t) => {
+      const mascota = await Mascota.findByPk(datos.mascotaId, { transaction: t });
+      if (!mascota) {
+        throw new NotFoundError(`La mascota con id ${datos.mascotaId} no existe`);
       }
 
-      if (turnoAsociado.mascotaId !== Number(datos.mascotaId)) {
-        throw new BadRequestError('El turno seleccionado no corresponde a la mascota indicada');
-      }
-
-      await turnoAsociado.update({ estado: 'atendido' });
-    }
-
-    const nuevaConsulta = await Consulta.create({
-      version: 1,
-      fecha: datos.fecha || new Date(),
-      subjetivo: datos.subjetivo,
-      objetivo: datos.objetivo,
-      peso: Number(datos.peso),
-      temperatura: Number(datos.temperatura),
-      frecuenciaCardiaca: datos.frecuenciaCardiaca ? Number(datos.frecuenciaCardiaca) : null,
-      frecuenciaRespiratoria: datos.frecuenciaRespiratoria ? Number(datos.frecuenciaRespiratoria) : null,
-      analisis: datos.analisis,
-      plan: datos.plan,
-      observaciones: datos.observaciones || null,
-      mascotaId: datos.mascotaId,
-      veterinarioId: usuario.id,
-      turnoId: datos.turnoId || null
-    });
-
-    if (datos.peso !== undefined && datos.peso !== null) {
-      await mascota.update({ peso: Number(datos.peso) });
-    }
-
-    const snapshotInicial = {
-      subjetivo: nuevaConsulta.subjetivo,
-      objetivo: nuevaConsulta.objetivo,
-      peso: nuevaConsulta.peso,
-      temperatura: nuevaConsulta.temperatura,
-      frecuenciaCardiaca: nuevaConsulta.frecuenciaCardiaca,
-      frecuenciaRespiratoria: nuevaConsulta.frecuenciaRespiratoria,
-      analisis: nuevaConsulta.analisis,
-      plan: nuevaConsulta.plan,
-      observaciones: nuevaConsulta.observaciones,
-      fecha: nuevaConsulta.fecha,
-      mascotaId: nuevaConsulta.mascotaId,
-      veterinarioId: nuevaConsulta.veterinarioId
-    };
-
-    const fechaVersion = nuevaConsulta.createdAt || new Date();
-    const hashSha256 = generarHashVersion({
-      consultaId: nuevaConsulta.id,
-      numeroVersion: 1,
-      autorId: usuario.id,
-      tipoAccion: 'CREACION_INICIAL',
-      fechaVersion,
-      snapshot: snapshotInicial
-    });
-
-    await VersionConsulta.create({
-      consultaId: nuevaConsulta.id,
-      numeroVersion: 1,
-      autorId: usuario.id,
-      tipoAccion: 'CREACION_INICIAL',
-      motivoEdicion: 'Registro inicial de la consulta médica SOAP',
-      valoresAnteriores: null,
-      valoresModificados: null,
-      datosCompletosSnapshot: snapshotInicial,
-      hashSha256,
-      fechaVersion
-    });
-
-    return await Consulta.findByPk(nuevaConsulta.id, {
-      include: [
-        { model: Mascota, as: 'mascota' },
-        {
-          model: Usuario,
-          as: 'veterinario',
-          attributes: ['id', 'nombre', 'apellido', 'email', 'telefono']
-        },
-        { model: Turno, as: 'turno' },
-        {
-          model: VersionConsulta,
-          as: 'versiones',
-          include: [
-            {
-              model: Usuario,
-              as: 'autor',
-              attributes: ['id', 'nombre', 'apellido', 'email']
-            }
-          ]
+      let turnoAsociado = null;
+      if (datos.turnoId) {
+        turnoAsociado = await Turno.findByPk(datos.turnoId, { transaction: t });
+        if (!turnoAsociado) {
+          throw new NotFoundError(`El turno con id ${datos.turnoId} no existe`);
         }
-      ]
+
+        if (turnoAsociado.mascotaId !== Number(datos.mascotaId)) {
+          throw new BadRequestError('El turno seleccionado no corresponde a la mascota indicada');
+        }
+
+        await turnoAsociado.update({ estado: 'atendido' }, { transaction: t });
+      }
+
+      const nuevaConsulta = await Consulta.create(
+        {
+          version: 1,
+          fecha: datos.fecha || new Date(),
+          subjetivo: datos.subjetivo,
+          objetivo: datos.objetivo,
+          peso: Number(datos.peso),
+          temperatura: Number(datos.temperatura),
+          frecuenciaCardiaca: datos.frecuenciaCardiaca ? Number(datos.frecuenciaCardiaca) : null,
+          frecuenciaRespiratoria: datos.frecuenciaRespiratoria ? Number(datos.frecuenciaRespiratoria) : null,
+          analisis: datos.analisis,
+          plan: datos.plan,
+          observaciones: datos.observaciones || null,
+          mascotaId: datos.mascotaId,
+          veterinarioId: usuario.id,
+          turnoId: datos.turnoId || null
+        },
+        { transaction: t }
+      );
+
+      if (datos.peso !== undefined && datos.peso !== null) {
+        await mascota.update({ peso: Number(datos.peso) }, { transaction: t });
+      }
+
+      const snapshotInicial = {
+        subjetivo: nuevaConsulta.subjetivo,
+        objetivo: nuevaConsulta.objetivo,
+        peso: nuevaConsulta.peso,
+        temperatura: nuevaConsulta.temperatura,
+        frecuenciaCardiaca: nuevaConsulta.frecuenciaCardiaca,
+        frecuenciaRespiratoria: nuevaConsulta.frecuenciaRespiratoria,
+        analisis: nuevaConsulta.analisis,
+        plan: nuevaConsulta.plan,
+        observaciones: nuevaConsulta.observaciones,
+        fecha: nuevaConsulta.fecha,
+        mascotaId: nuevaConsulta.mascotaId,
+        veterinarioId: nuevaConsulta.veterinarioId
+      };
+
+      const fechaVersion = nuevaConsulta.createdAt || new Date();
+      const hashSha256 = generarHashVersion({
+        consultaId: nuevaConsulta.id,
+        numeroVersion: 1,
+        autorId: usuario.id,
+        tipoAccion: 'CREACION_INICIAL',
+        fechaVersion,
+        snapshot: snapshotInicial
+      });
+
+      await VersionConsulta.create(
+        {
+          consultaId: nuevaConsulta.id,
+          numeroVersion: 1,
+          autorId: usuario.id,
+          tipoAccion: 'CREACION_INICIAL',
+          motivoEdicion: 'Registro inicial de la consulta medica SOAP',
+          valoresAnteriores: null,
+          valoresModificados: null,
+          datosCompletosSnapshot: snapshotInicial,
+          hashSha256,
+          fechaVersion
+        },
+        { transaction: t }
+      );
+
+      if (Array.isArray(datos.consumosStock) && datos.consumosStock.length > 0) {
+        const inventarioService = require('./inventarioService');
+        for (const item of datos.consumosStock) {
+          await inventarioService.registrarConsumo(
+            {
+              productoId: item.productoId,
+              loteId: item.loteId,
+              cantidad: item.cantidad,
+              consultaId: nuevaConsulta.id,
+              observaciones: item.observaciones || `Consumo clinico en atencion #${nuevaConsulta.id}`
+            },
+            usuario,
+            t
+          );
+        }
+      }
+
+      return await Consulta.findByPk(nuevaConsulta.id, {
+        include: [
+          { model: Mascota, as: 'mascota' },
+          {
+            model: Usuario,
+            as: 'veterinario',
+            attributes: ['id', 'nombre', 'apellido', 'email', 'telefono']
+          },
+          { model: Turno, as: 'turno' },
+          {
+            model: VersionConsulta,
+            as: 'versiones',
+            include: [
+              {
+                model: Usuario,
+                as: 'autor',
+                attributes: ['id', 'nombre', 'apellido', 'email']
+              }
+            ]
+          }
+        ],
+        transaction: t
+      });
     });
   },
 
@@ -133,7 +159,7 @@ const consultaService = {
 
     const rol = String(usuario.rol?.nombre || usuario.rol || '').toUpperCase();
     if (rol !== 'ADMIN' && consulta.veterinarioId !== usuario.id) {
-      throw new ForbiddenError('Solo el profesional responsable de la atención o un administrador pueden enmendar esta consulta');
+      throw new ForbiddenError('Solo el profesional responsable de la atencion o un administrador pueden enmendar esta consulta');
     }
 
     const camposAuditables = [
@@ -173,7 +199,7 @@ const consultaService = {
     }
 
     if (!huboCambios) {
-      throw new BadRequestError('No se detectaron cambios en los campos clínicos de la consulta.');
+      throw new BadRequestError('No se detectaron cambios en los campos clinicos de la consulta.');
     }
 
     const versionActual = consulta.version || 1;
@@ -261,7 +287,7 @@ const consultaService = {
 
     const rol = String(usuario.rol?.nombre || usuario.rol || '').toUpperCase();
     if (rol === 'CLIENTE' && consulta.mascota && consulta.mascota.usuarioId !== usuario.id) {
-      throw new ForbiddenError('No tienes permisos para consultar la auditoría de esta consulta');
+      throw new ForbiddenError('No tienes permisos para consultar la auditoria de esta consulta');
     }
 
     let versiones = await VersionConsulta.findAll({
@@ -276,7 +302,7 @@ const consultaService = {
       order: [['numeroVersion', 'ASC']]
     });
 
-    // Retrocompatibilidad: Si es una consulta creada antes de este sistema de versionado
+
     if (versiones.length === 0) {
       const snapshotInicial = {
         subjetivo: consulta.subjetivo,
@@ -305,7 +331,7 @@ const consultaService = {
         numeroVersion: 1,
         autorId: consulta.veterinarioId,
         tipoAccion: 'CREACION_INICIAL',
-        motivoEdicion: 'Registro histórico inicial de la consulta médica SOAP',
+        motivoEdicion: 'Registro historico inicial de la consulta medica SOAP',
         valoresAnteriores: null,
         valoresModificados: null,
         datosCompletosSnapshot: snapshotInicial,
@@ -340,7 +366,7 @@ const consultaService = {
 
     const rol = String(usuario.rol?.nombre || usuario.rol || '').toUpperCase();
     if (rol !== 'ADMIN' && consulta.veterinarioId !== usuario.id) {
-      throw new ForbiddenError('Solo el profesional responsable de la atención o un administrador pueden anular esta consulta');
+      throw new ForbiddenError('Solo el profesional responsable de la atencion o un administrador pueden anular esta consulta');
     }
 
     const versionActual = consulta.version || 1;
@@ -374,7 +400,7 @@ const consultaService = {
       numeroVersion: nuevaVersion,
       autorId: usuario.id,
       tipoAccion: 'ANULACION_LOGICA',
-      motivoEdicion: motivoAnulacion || 'Anulación lógica de la consulta médica',
+      motivoEdicion: motivoAnulacion || 'Anulacion logica de la consulta medica',
       valoresAnteriores: null,
       valoresModificados: { estado: 'ANULADA_LOGICAMENTE' },
       datosCompletosSnapshot: snapshotFinal,
@@ -382,11 +408,10 @@ const consultaService = {
       fechaVersion
     });
 
-    // Prohibición estricta de borrado físico: solo soft delete (deletedAt)
     await consulta.destroy({ force: false });
 
     return {
-      message: 'Consulta anulada lógicamente de manera exitosa (soft delete registrado en auditoría)',
+      message: 'Consulta anulada logicamente de manera exitosa (soft delete registrado en auditoria)',
       consultaId: id,
       versionAnulacion: nuevaVersion
     };

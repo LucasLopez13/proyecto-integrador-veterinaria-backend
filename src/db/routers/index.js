@@ -1,4 +1,4 @@
-﻿const express = require('express');
+const express = require('express');
 const router = express.Router();
 
 const authRoutes = require('./authRoutes');
@@ -15,6 +15,7 @@ const pagoRoutes = require('./pagoRoutes');
 const carnetVacunacionRoutes = require('./carnetVacunacionRoutes');
 const alertaStockRoutes = require('./alertaStockRoutes');
 const facturacionRoutes = require('./facturacionRoutes');
+const inventarioRoutes = require('./inventarioRoutes');
 
 router.use('/auth', authRoutes);
 router.use('/usuarios', usuarioRoutes);
@@ -30,5 +31,6 @@ router.use('/pagos', pagoRoutes);
 router.use('/carnets-vacunacion', carnetVacunacionRoutes);
 router.use('/alertas-stock', alertaStockRoutes);
 router.use('/facturacion', facturacionRoutes);
+router.use('/inventario', inventarioRoutes);
 
 module.exports = router;

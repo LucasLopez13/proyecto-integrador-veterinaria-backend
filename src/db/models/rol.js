@@ -5,7 +5,10 @@ const { Model } = require('sequelize');
 module.exports = (sequelize, DataTypes) => {
   class Rol extends Model {
     static associate(models) {
-      // Usuario utiliza el campo de texto "rol", no una FK "rolId".
+      Rol.hasMany(models.Usuario, {
+        foreignKey: 'rolId',
+        as: 'usuarios'
+      });
     }
   }
 
