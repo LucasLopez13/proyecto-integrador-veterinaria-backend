@@ -61,6 +61,18 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.DATE,
         allowNull: true
       },
+      frecuenciaHoras: {
+        type: DataTypes.INTEGER,
+        allowNull: false
+      },
+      duracionDias: {
+        type: DataTypes.INTEGER,
+        allowNull: false
+      },
+      indicaciones: {
+        type: DataTypes.TEXT,
+        allowNull: true
+      },
       consultaId: {
         type: DataTypes.INTEGER,
         allowNull: false

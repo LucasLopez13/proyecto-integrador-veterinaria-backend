@@ -5,7 +5,10 @@ const prescripcionCreateSchema = Joi.object({
   concentracion: Joi.number().positive().required(),
   unidadConcentracion: Joi.string().trim().min(1).max(30).required(),
   dosisIndicada: Joi.number().positive().required(),
-  unidadDosis: Joi.string().trim().min(1).max(30).required()
+  unidadDosis: Joi.string().trim().min(1).max(30).required(),
+  frecuenciaHoras: Joi.number().integer().positive().required(),
+  duracionDias: Joi.number().integer().positive().required(),
+  indicaciones: Joi.string().trim().max(2000).allow('', null).optional(),
 });
 
 module.exports = {
