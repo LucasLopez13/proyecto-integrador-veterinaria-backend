@@ -41,10 +41,6 @@ module.exports = (sequelize, DataTypes) => {
         as: 'consultasRealizadas'
       });
 
-      Usuario.hasMany(models.Receta, {
-        foreignKey: 'profesionalId',
-        as: 'recetas'
-      });
     }
   }
 

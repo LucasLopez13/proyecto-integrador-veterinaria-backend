@@ -1,10 +1,9 @@
-
 const recetaService = require('../services/recetaService');
 
 const getAll = async (req, res, next) => {
   try {
-    const recetas = await recetaService.getAll(req.user.id);
-    res.json(recetas);
+    const recetas = await recetaService.getAll(req.user);
+    res.status(200).json(recetas);
   } catch (error) {
     next(error);
   }
@@ -13,17 +12,11 @@ const getAll = async (req, res, next) => {
 const getById = async (req, res, next) => {
   try {
     const receta = await recetaService.getById(
-      req.params.id,
-      req.user.id
+      Number(req.params.id),
+      req.user
     );
 
-    if (!receta) {
-      return res.status(404).json({
-        message: 'Receta no encontrada'
-      });
-    }
-
-    res.json(receta);
+    res.status(200).json(receta);
   } catch (error) {
     next(error);
   }
@@ -33,14 +26,8 @@ const create = async (req, res, next) => {
   try {
     const receta = await recetaService.create(
       req.body,
-      req.user.id
+      req.user
     );
-
-    if (!receta) {
-      return res.status(404).json({
-        message: 'Mascota no encontrada'
-      });
-    }
 
     res.status(201).json(receta);
   } catch (error) {
@@ -51,18 +38,12 @@ const create = async (req, res, next) => {
 const update = async (req, res, next) => {
   try {
     const receta = await recetaService.update(
-      req.params.id,
+      Number(req.params.id),
       req.body,
-      req.user.id
+      req.user
     );
 
-    if (!receta) {
-      return res.status(404).json({
-        message: 'Receta no encontrada'
-      });
-    }
-
-    res.json(receta);
+    res.status(200).json(receta);
   } catch (error) {
     next(error);
   }
@@ -70,18 +51,12 @@ const update = async (req, res, next) => {
 
 const remove = async (req, res, next) => {
   try {
-    const receta = await recetaService.remove(
-      req.params.id,
-      req.user.id
+    await recetaService.remove(
+      Number(req.params.id),
+      req.user
     );
 
-    if (!receta) {
-      return res.status(404).json({
-        message: 'Receta no encontrada'
-      });
-    }
-
-    res.json({
+    res.status(200).json({
       message: 'Receta eliminada correctamente'
     });
   } catch (error) {

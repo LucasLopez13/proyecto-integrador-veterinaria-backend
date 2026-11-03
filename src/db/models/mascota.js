@@ -39,10 +39,6 @@ module.exports = (sequelize, DataTypes) => {
         as: 'triages'
       });
 
-      Mascota.hasMany(models.Receta, {
-        foreignKey: 'mascotaId',
-        as: 'recetas'
-      });
     }
   }
 

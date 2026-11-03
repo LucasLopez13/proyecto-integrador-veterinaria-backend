@@ -1,94 +1,188 @@
+const db = require('../models');
+const { Receta, Consulta, Mascota, Usuario, Producto } = db;
 
-const { Receta, Mascota, Usuario } = require('../models');
+const {
+  NotFoundError,
+  ForbiddenError
+} = require('../utils/customErrors');
+
+const obtenerRol = (usuario) =>
+  String(usuario.rol?.nombre || usuario.rol || '').toUpperCase();
 
 const incluirRelaciones = [
   {
-    model: Mascota,
-    as: 'mascota'
+    model: Consulta,
+    as: 'consulta',
+    include: [
+      { model: Mascota, as: 'mascota' },
+      {
+        model: Usuario,
+        as: 'veterinario',
+        attributes: ['id', 'nombre', 'apellido', 'email']
+      }
+    ]
   },
-  {
-    model: Usuario,
-    as: 'profesional',
-    attributes: ['id', 'nombre', 'apellido', 'email']
-  }
+  { model: Producto, as: 'producto' }
 ];
 
-const getAll = async (usuarioId) => {
-  return Receta.findAll({
-    include: [
-      {
-        model: Mascota,
-        as: 'mascota',
-        where: { usuarioId }
-      },
-      incluirRelaciones[1]
-    ],
-    order: [['fecha', 'DESC']]
-  });
-};
+const verificarAcceso = async (consulta, usuario) => {
+  const rol = obtenerRol(usuario);
 
-const getById = async (id, usuarioId) => {
-  return Receta.findOne({
-    where: { id },
-    include: [
-      {
-        model: Mascota,
-        as: 'mascota',
-        where: { usuarioId }
-      },
-      incluirRelaciones[1]
-    ]
-  });
-};
+  if (rol === 'ADMIN') return;
 
-const create = async (data, profesionalId) => {
-  const mascota = await Mascota.findByPk(data.mascotaId);
-
-  if (!mascota) {
-    return null;
+  if (rol === 'PROFESIONAL') {
+    if (consulta.veterinarioId !== usuario.id) {
+      throw new ForbiddenError(
+        'Solo el profesional responsable de la consulta puede acceder a esta receta'
+      );
+    }
+    return;
   }
 
-  return Receta.create({
-    ...data,
-    profesionalId
-  });
+  if (rol === 'CLIENTE') {
+    const mascota = await Mascota.findByPk(consulta.mascotaId);
+
+    if (!mascota || mascota.usuarioId !== usuario.id) {
+      throw new ForbiddenError(
+        'No tienes permisos para acceder a esta receta'
+      );
+    }
+    return;
+  }
+
+  throw new ForbiddenError('No tienes permisos para acceder a esta receta');
 };
 
-const update = async (id, data, profesionalId) => {
-  const receta = await Receta.findOne({
-    where: { id, profesionalId }
+const getAll = async (usuario) => {
+  const rol = obtenerRol(usuario);
+  const whereConsulta = {};
+
+  if (rol === 'PROFESIONAL') {
+    whereConsulta.veterinarioId = usuario.id;
+  }
+
+  const recetas = await Receta.findAll({
+    include: [
+      {
+        model: Consulta,
+        as: 'consulta',
+        where: whereConsulta,
+        include: [{ model: Mascota, as: 'mascota' }]
+      },
+      { model: Producto, as: 'producto' }
+    ],
+    order: [['createdAt', 'DESC']]
+  });
+
+  if (rol === 'CLIENTE') {
+    const recetasPropias = [];
+
+    for (const receta of recetas) {
+      const mascota = receta.consulta.mascota;
+
+      if (mascota && mascota.usuarioId === usuario.id) {
+        recetasPropias.push(receta);
+      }
+    }
+
+    return recetasPropias;
+  }
+
+  return recetas;
+};
+
+const getById = async (id, usuario) => {
+  const receta = await Receta.findByPk(id, {
+    include: incluirRelaciones
   });
 
   if (!receta) {
-    return null;
+    throw new NotFoundError(`Receta con id ${id} no encontrada`);
   }
 
-  const camposPermitidos = [
-    'fecha',
-    'medicamento',
-    'indicaciones',
-    'estado'
-  ];
-
-  const cambios = Object.fromEntries(
-    Object.entries(data).filter(([campo]) =>
-      camposPermitidos.includes(campo)
-    )
-  );
-
-  await receta.update(cambios);
+  await verificarAcceso(receta.consulta, usuario);
 
   return receta;
 };
 
-const remove = async (id, profesionalId) => {
-  const receta = await Receta.findOne({
-    where: { id, profesionalId }
+const create = async (datos, usuario) => {
+  const consulta = await Consulta.findByPk(datos.consultaId);
+
+  if (!consulta) {
+    throw new NotFoundError(
+      `Consulta con id ${datos.consultaId} no encontrada`
+    );
+  }
+
+  await verificarAcceso(consulta, usuario);
+
+  const producto = await Producto.findByPk(datos.productoId);
+
+  if (!producto) {
+    throw new NotFoundError(
+      `Producto con id ${datos.productoId} no encontrado`
+    );
+  }
+
+  const receta = await Receta.create(datos);
+
+  return await Receta.findByPk(receta.id, {
+    include: incluirRelaciones
+  });
+};
+
+const update = async (id, datos, usuario) => {
+  const receta = await Receta.findByPk(id, {
+    include: [{ model: Consulta, as: 'consulta' }]
   });
 
   if (!receta) {
-    return null;
+    throw new NotFoundError(`Receta con id ${id} no encontrada`);
   }
+
+  await verificarAcceso(receta.consulta, usuario);
+
+  const camposPermitidos = [
+    'productoId',
+    'dosis',
+    'frecuencia',
+    'duracion',
+    'indicaciones'
+  ];
+
+  const cambios = Object.fromEntries(
+    Object.entries(datos).filter(([campo]) =>
+      camposPermitidos.includes(campo)
+    )
+  );
+
+  if (cambios.productoId) {
+    const producto = await Producto.findByPk(cambios.productoId);
+
+    if (!producto) {
+      throw new NotFoundError(
+        `Producto con id ${cambios.productoId} no encontrado`
+      );
+    }
+  }
+
+  await receta.update(cambios);
+
+  return await Receta.findByPk(id, {
+    include: incluirRelaciones
+  });
+};
+
+const remove = async (id, usuario) => {
+  const receta = await Receta.findByPk(id, {
+    include: [{ model: Consulta, as: 'consulta' }]
+  });
+
+  if (!receta) {
+    throw new NotFoundError(`Receta con id ${id} no encontrada`);
+  }
+
+  await verificarAcceso(receta.consulta, usuario);
 
   await receta.destroy();
 

@@ -24,6 +24,11 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: 'productoId',
         as: 'detallesFacturacion'
       });
+
+      Producto.hasMany(models.Receta, {
+        foreignKey: 'productoId',
+        as: 'recetas'
+      });
     }
   }
 

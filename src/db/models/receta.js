@@ -1,53 +1,55 @@
 'use strict';
+
 const { Model } = require('sequelize');
 
 module.exports = (sequelize, DataTypes) => {
   class Receta extends Model {
     static associate(models) {
-      Receta.belongsTo(models.Mascota, {
-        foreignKey: 'mascotaId',
-        as: 'mascota'
+      Receta.belongsTo(models.Consulta, {
+        foreignKey: 'consultaId',
+        as: 'consulta'
       });
 
-      Receta.belongsTo(models.Usuario, {
-        foreignKey: 'profesionalId',
-        as: 'profesional'
+      Receta.belongsTo(models.Producto, {
+        foreignKey: 'productoId',
+        as: 'producto'
       });
     }
   }
 
   Receta.init(
     {
-      fecha: {
-        type: DataTypes.DATE,
+      consultaId: {
+        type: DataTypes.INTEGER,
         allowNull: false
       },
-      medicamento: {
-        type: DataTypes.STRING,
+      productoId: {
+        type: DataTypes.INTEGER,
+        allowNull: false
+      },
+      dosis: {
+        type: DataTypes.TEXT,
+        allowNull: false
+      },
+      frecuencia: {
+        type: DataTypes.INTEGER,
+        allowNull: false
+      },
+      duracion: {
+        type: DataTypes.INTEGER,
         allowNull: false
       },
       indicaciones: {
         type: DataTypes.TEXT,
-        allowNull: false
-      },
-      estado: {
-        type: DataTypes.STRING,
-        defaultValue: 'activo',
-        allowNull: false
-      },
-      mascotaId: {
-        type: DataTypes.INTEGER,
-        allowNull: false
-      },
-      profesionalId: {
-        type: DataTypes.INTEGER,
-        allowNull: false
+        allowNull: true
       }
     },
     {
       sequelize,
       modelName: 'Receta',
-      tableName: 'recetas'
+      tableName: 'recetas',
+      timestamps: true,
+      paranoid: true
     }
   );
 
