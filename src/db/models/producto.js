@@ -1,4 +1,4 @@
- 'use strict';
+'use strict';
 
 const { Model } = require('sequelize');
 
@@ -13,6 +13,16 @@ module.exports = (sequelize, DataTypes) => {
       Producto.hasMany(models.MovimientoStock, {
         foreignKey: 'productoId',
         as: 'movimientos'
+      });
+
+      Producto.hasMany(models.ConceptoConsulta, {
+        foreignKey: 'productoId',
+        as: 'conceptosConsulta'
+      });
+
+      Producto.hasMany(models.DetalleOrdenFacturacion, {
+        foreignKey: 'productoId',
+        as: 'detallesFacturacion'
       });
     }
   }

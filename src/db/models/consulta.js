@@ -7,9 +7,10 @@ module.exports = (sequelize, DataTypes) => {
       Consulta.belongsTo(models.Mascota, { foreignKey: 'mascotaId', as: 'mascota' });
       Consulta.belongsTo(models.Usuario, { foreignKey: 'veterinarioId', as: 'veterinario' });
       Consulta.belongsTo(models.Turno, { foreignKey: 'turnoId', as: 'turno' });
-      Consulta.hasMany(models.Prescripcion, {foreignKey: 'consultaId',as: 'prescripciones'});
-      Consulta.hasMany(models.VersionConsulta, {foreignKey: 'consultaId',as: 'versiones'});
-      Consulta.hasMany(models.MovimientoStock, {foreignKey: 'consultaId', as: 'movimientosStock'});
+      Consulta.hasMany(models.Prescripcion, { foreignKey: 'consultaId', as: 'prescripciones' });
+      Consulta.hasMany(models.VersionConsulta, { foreignKey: 'consultaId', as: 'versiones' });
+      Consulta.hasMany(models.ConceptoConsulta, { foreignKey: 'consultaId', as: 'conceptosFacturacion' });
+      Consulta.hasMany(models.MovimientoStock, { foreignKey: 'consultaId', as: 'movimientosStock' });
     }
   }
 
