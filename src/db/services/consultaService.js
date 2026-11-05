@@ -86,16 +86,17 @@ const consultaService = {
       }
 
       if (db.Triage) {
-        await db.Triage.update(
-          { estado: 'atendido' },
-          {
-            where: {
-              mascotaId: Number(datos.mascotaId),
-              estado: ['en_espera', 'en_atencion']
-            },
-            transaction: t
-          }
-        );
+        const triagesActivos = await db.Triage.findAll({
+          where: {
+            mascotaId: Number(datos.mascotaId),
+            estado: ['ACTIVO', 'en_espera', 'en_atencion']
+          },
+          transaction: t
+        });
+        for (const tr of triagesActivos) {
+          await tr.update({ estado: 'FINALIZADO' }, { transaction: t });
+          await tr.destroy({ force: false, transaction: t });
+        }
       }
 
       const nuevaConsulta = await Consulta.create(
