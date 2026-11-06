@@ -1,8 +1,8 @@
 
 const db = require('../models');
-const {Prescripcion,Consulta,Usuario} = db;
+const { Prescripcion, Consulta, Usuario } = db;
 
-const {NotFoundError,ForbiddenError,BadRequestError} = require('../utils/customErrors');
+const { NotFoundError, ForbiddenError, BadRequestError } = require('../utils/customErrors');
 
 const prescripcionService = {
   create: async (datos, usuario) => {
@@ -46,6 +46,7 @@ const prescripcionService = {
       unidadConcentracion: datos.unidadConcentracion,
       dosisIndicada,
       unidadDosis: datos.unidadDosis,
+      unidadAdministracion: datos.unidadAdministracion,
       pesoKg,
       dosisTotal,
       volumenMl,
