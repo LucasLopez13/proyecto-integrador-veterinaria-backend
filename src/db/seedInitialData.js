@@ -42,7 +42,7 @@ async function seedInitialData() {
       unidadMedida: 'ml',
       stockActual: 100,
       alertaStockMinimo: 15,
-      precioUnitario: 3500,
+      precioUnitario: 350,
       lote: { numeroLote: 'LOT-MEL-2026', fechaVencimiento: sumarDiasFecha(120), stockInicial: 100, stockActual: 100 }
     },
     {
@@ -62,7 +62,7 @@ async function seedInitialData() {
       unidadMedida: 'ml',
       stockActual: 4,
       alertaStockMinimo: 8,
-      precioUnitario: 4200,
+      precioUnitario: 420,
       lote: { numeroLote: 'LOT-TRA-2026', fechaVencimiento: sumarDiasFecha(14), stockInicial: 30, stockActual: 4 }
     },
     {
@@ -82,7 +82,7 @@ async function seedInitialData() {
       unidadMedida: 'ml',
       stockActual: 2500,
       alertaStockMinimo: 500,
-      precioUnitario: 2800,
+      precioUnitario: 5.6,
       lote: { numeroLote: 'LOT-FIS-2026', fechaVencimiento: sumarDiasFecha(180), stockInicial: 2500, stockActual: 2500 }
     },
     {
@@ -92,7 +92,7 @@ async function seedInitialData() {
       unidadMedida: 'ml',
       stockActual: 0,
       alertaStockMinimo: 10,
-      precioUnitario: 3900,
+      precioUnitario: 390,
       lote: { numeroLote: 'LOT-DEX-2026', fechaVencimiento: sumarDiasFecha(60), stockInicial: 20, stockActual: 0 }
     },
     {
@@ -102,7 +102,7 @@ async function seedInitialData() {
       unidadMedida: 'ml',
       stockActual: 3,
       alertaStockMinimo: 10,
-      precioUnitario: 6800,
+      precioUnitario: 680,
       lote: { numeroLote: 'LOT-KET-2026', fechaVencimiento: sumarDiasFecha(6), stockInicial: 25, stockActual: 3 }
     },
     {
@@ -112,7 +112,7 @@ async function seedInitialData() {
       unidadMedida: 'ml',
       stockActual: 5,
       alertaStockMinimo: 5,
-      precioUnitario: 3100,
+      precioUnitario: 310,
       lote: { numeroLote: 'LOT-ATR-VENC', fechaVencimiento: sumarDiasFecha(-5), stockInicial: 15, stockActual: 5 }
     }
   ];
@@ -131,7 +131,7 @@ async function seedInitialData() {
       }
     });
 
-    if (!creado && Number(prod.precioUnitario) === 0) {
+    if (!creado && Number(prod.precioUnitario) !== Number(item.precioUnitario)) {
       await prod.update({ precioUnitario: item.precioUnitario });
     }
 

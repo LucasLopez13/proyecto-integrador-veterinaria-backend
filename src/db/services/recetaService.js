@@ -77,8 +77,9 @@ const formatearPrescripcionComoReceta = (prescInstance) => {
     : { ...prescInstance };
 
   const fecha = plain.createdAt || plain.consulta?.fecha || new Date().toISOString();
+  const unidadAdmin = plain.unidadAdministracion || 'ml';
   const detalleDosis = plain.dosisTotal != null
-    ? `${plain.dosisTotal} mg${plain.volumenMl != null ? ` (${plain.volumenMl} ml)` : ''}`
+    ? `${plain.dosisTotal} mg${plain.volumenMl != null ? ` (${plain.volumenMl} ${unidadAdmin})` : ''}`
     : `${plain.dosisIndicada} ${plain.unidadDosis}`;
 
   const resumenPosologia = [

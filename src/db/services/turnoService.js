@@ -1,6 +1,6 @@
 
 const db = require('../models');
-const { Turno, Mascota, Usuario, Pago, Consulta } = db;
+const { Turno, Mascota, Usuario, Consulta } = db;
 const {
   NotFoundError,
   ForbiddenError,
@@ -83,7 +83,18 @@ const turnoService = {
     const baseOptions = {
       include: [
         { model: Mascota, as: 'mascota' },
-        { model: Pago, as: 'pagos' },
+        {
+          model: Consulta,
+          as: 'consulta',
+          required: false,
+          include: [
+            {
+              model: db.OrdenFacturacion,
+              as: 'ordenFacturacion',
+              required: false
+            }
+          ]
+        },
         ...(puedeVerTodos
           ? [{
             model: Usuario,
@@ -267,10 +278,10 @@ const turnoService = {
 
     const transicionesPermitidas = {
       pendiente: ['confirmado', 'atendido', 'completado', 'cancelado'],
-      confirmado: ['atendido', 'completado', 'cancelado'],
-      cancelado: [],
-      completado: [],
-      atendido: ['completado']
+      confirmado: ['pendiente', 'atendido', 'completado', 'cancelado'],
+      cancelado: ['pendiente', 'confirmado'],
+      completado: ['atendido'],
+      atendido: ['completado', 'confirmado', 'pendiente']
     };
 
     const estadosPermitidos = transicionesPermitidas[turno.estado] || [];

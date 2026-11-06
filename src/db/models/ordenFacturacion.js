@@ -50,6 +50,18 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
         defaultValue: 'pendiente'
       },
+      metodoPago: {
+        type: DataTypes.STRING,
+        allowNull: true
+      },
+      fechaPago: {
+        type: DataTypes.DATE,
+        allowNull: true
+      },
+      comprobante: {
+        type: DataTypes.STRING,
+        allowNull: true
+      },
       observaciones: {
         type: DataTypes.TEXT,
         allowNull: true

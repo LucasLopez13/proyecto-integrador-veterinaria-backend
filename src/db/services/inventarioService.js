@@ -60,6 +60,9 @@ const inventarioService = {
       if (!producto) {
         throw new NotFoundError(`Producto con id ${productoId} no encontrado.`);
       }
+      if (String(producto.unidadMedida || '').toLowerCase() === 'comprimidos' && !Number.isInteger(cantNum)) {
+        throw new BadRequestError('Para medicamentos en comprimidos la cantidad a debitar debe ser un numero entero.');
+      }
 
       const lote = await Lote.findByPk(loteId, {
         transaction: t,

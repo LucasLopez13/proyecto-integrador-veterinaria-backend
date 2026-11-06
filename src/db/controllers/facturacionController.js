@@ -188,6 +188,23 @@ const facturacionController = {
     } catch (error) {
       next(error);
     }
+  },
+
+  pagarOrden: async (req, res, next) => {
+    try {
+      const orden = await facturacionService.pagarOrden(
+        req.params.id,
+        req.body,
+        req.user
+      );
+
+      res.json({
+        message: `La orden #${orden.id} fue abonada exitosamente`,
+        orden
+      });
+    } catch (error) {
+      next(error);
+    }
   }
 };
 

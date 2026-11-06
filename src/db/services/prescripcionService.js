@@ -42,7 +42,12 @@ const prescripcionService = {
     if (unidadDosis === 'mg/kg') {
       dosisTotal = Number((dosisIndicada * pesoKg).toFixed(2));
 
-      if (unidadConcentracion === 'mg/ml') {
+      if (
+        (unidadConcentracion === 'mg/ml' ||
+          unidadConcentracion === 'mg/comprimido' ||
+          unidadConcentracion === 'mg/comp') &&
+        concentracion > 0
+      ) {
         volumenMl = Number((dosisTotal / concentracion).toFixed(2));
       }
     }

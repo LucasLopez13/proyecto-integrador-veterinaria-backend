@@ -11,6 +11,7 @@ module.exports = (sequelize, DataTypes) => {
       Consulta.hasMany(models.Receta, { foreignKey: 'consultaId', as: 'recetas' });
       Consulta.hasMany(models.VersionConsulta, { foreignKey: 'consultaId', as: 'versiones' });
       Consulta.hasMany(models.ConceptoConsulta, { foreignKey: 'consultaId', as: 'conceptosFacturacion' });
+      Consulta.hasOne(models.OrdenFacturacion, { foreignKey: 'consultaId', as: 'ordenFacturacion' });
       Consulta.hasMany(models.MovimientoStock, { foreignKey: 'consultaId', as: 'movimientosStock' });
     }
   }

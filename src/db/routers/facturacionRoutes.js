@@ -71,6 +71,13 @@ router.patch(
   facturacionController.actualizarEstadoOrden
 );
 
+router.post(
+  '/ordenes/:id/pagar',
+  authenticateToken,
+  hasRole('cliente', 'profesional', 'recepcion', 'admin'),
+  facturacionController.pagarOrden
+);
+
 router.get(
   '/consultas-pendientes',
   authenticateToken,

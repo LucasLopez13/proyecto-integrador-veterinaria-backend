@@ -1,4 +1,4 @@
-﻿const Joi = require('joi');
+const Joi = require('joi');
 
 const consultaCreateSchema = Joi.object({
   fecha: Joi.date().iso().optional(),
@@ -52,6 +52,16 @@ const consultaCreateSchema = Joi.object({
   }),
   turnoId: Joi.number().integer().positive().allow(null).optional(),
   consumosStock: Joi.array()
+    .items(
+      Joi.object({
+        productoId: Joi.number().integer().positive().required(),
+        loteId: Joi.number().integer().positive().required(),
+        cantidad: Joi.number().positive().required(),
+        observaciones: Joi.string().allow('', null).optional()
+      })
+    )
+    .optional(),
+  consumos: Joi.array()
     .items(
       Joi.object({
         productoId: Joi.number().integer().positive().required(),

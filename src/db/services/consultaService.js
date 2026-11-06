@@ -173,13 +173,17 @@ const consultaService = {
       );
 
       // Deduccion de insumos de farmacia consumidos durante la atencion clinica
-      if (
-        Array.isArray(datos.consumosStock) &&
-        datos.consumosStock.length > 0
-      ) {
+      const listaConsumos =
+        Array.isArray(datos.consumosStock) && datos.consumosStock.length > 0
+          ? datos.consumosStock
+          : Array.isArray(datos.consumos) && datos.consumos.length > 0
+            ? datos.consumos
+            : [];
+
+      if (listaConsumos.length > 0) {
         const inventarioService = require('./inventarioService');
 
-        for (const item of datos.consumosStock) {
+        for (const item of listaConsumos) {
           await inventarioService.registrarConsumo(
             {
               productoId: item.productoId,

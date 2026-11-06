@@ -56,7 +56,7 @@ const facturacionService = {
 
   listarProductos: async () => {
     return await Producto.findAll({
-      attributes: ['id', 'nombre', 'precioUnitario', 'stockActual'],
+      attributes: ['id', 'nombre', 'precioUnitario', 'stockActual', 'unidadMedida'],
       order: [['nombre', 'ASC']]
     });
   },
@@ -211,6 +211,9 @@ const facturacionService = {
 
       if (!producto) {
         throw new NotFoundError('El producto no existe');
+      }
+      if (String(producto.unidadMedida || '').toLowerCase() === 'comprimidos' && !Number.isInteger(cantidad)) {
+        throw new BadRequestError('Para productos en comprimidos la cantidad debe ser un numero entero');
       }
     }
 
@@ -392,40 +395,66 @@ const facturacionService = {
       throw new NotFoundError('Orden de facturacion no encontrada');
     }
 
-    await orden.update({ estado });
-
-    if (estado === 'pagada' && db.Pago) {
-      const condicionesPago = [{ presupuestoId: orden.id }];
-      if (orden.consulta?.turnoId) {
-        condicionesPago.push({ turnoId: orden.consulta.turnoId });
+    const cambios = { estado };
+    if (estado === 'pagada') {
+      cambios.fechaPago = new Date();
+      if (!orden.metodoPago) {
+        cambios.metodoPago = 'efectivo';
       }
-      const pagosRelacionados = await db.Pago.findAll({
-        where: {
-          [Op.or]: condicionesPago,
-          estado: 'pendiente'
-        }
-      });
-
-      if (pagosRelacionados.length > 0) {
-        for (const p of pagosRelacionados) {
-          await p.update({ estado: 'aprobado', presupuestoId: orden.id });
-        }
-      } else {
-        await db.Pago.create({
-          monto: orden.total,
-          concepto: `Pago de Orden de Facturacion #${orden.id}`,
-          metodo: 'efectivo',
-          estado: 'aprobado',
-          turnoId: orden.consulta?.turnoId || null,
-          presupuestoId: orden.id,
-          observaciones: `Registrado como abonado por ${usuario?.nombre || 'Personal'}`
-        });
-      }
+    } else if (estado === 'pendiente' || estado === 'anulada') {
+      cambios.fechaPago = null;
     }
+
+    await orden.update(cambios);
 
     return await facturacionService.obtenerOrdenFacturacion(id);
   },
 
+  pagarOrden: async (id, datos = {}, usuario) => {
+    const orden = await OrdenFacturacion.findByPk(id, {
+      include: [
+        {
+          model: Consulta,
+          as: 'consulta',
+          include: [{ model: db.Mascota, as: 'mascota' }]
+        }
+      ]
+    });
+
+    if (!orden) {
+      throw new NotFoundError('Orden de facturacion no encontrada');
+    }
+
+    const rol = obtenerRolNormalizado(usuario);
+    const esAdminOStaff = ['admin', 'recepcion', 'profesional', 'veterinario'].includes(rol);
+    if (!esAdminOStaff) {
+      if (Number(orden.consulta?.mascota?.usuarioId) !== Number(usuario.id)) {
+        throw new ForbiddenError('No tienes permiso para abonar esta orden de facturacion');
+      }
+    }
+
+    if (orden.estado === 'pagada') {
+      throw new BadRequestError('Esta orden de facturacion ya se encuentra pagada');
+    }
+
+    if (orden.estado === 'anulada') {
+      throw new BadRequestError('No se puede abonar una orden de facturacion anulada');
+    }
+
+    const metodoValido = ['transferencia', 'tarjeta', 'efectivo'].includes(datos.metodoPago)
+      ? datos.metodoPago
+      : 'transferencia';
+
+    await orden.update({
+      estado: 'pagada',
+      metodoPago: metodoValido,
+      fechaPago: new Date(),
+      comprobante: datos.comprobante ? String(datos.comprobante).trim() : null,
+      observaciones: datos.observaciones ? String(datos.observaciones).trim() : orden.observaciones
+    });
+
+    return await facturacionService.obtenerOrdenFacturacion(id);
+  },
   listarConsultasPendientesFacturacion: async () => {
     const ordenes = await OrdenFacturacion.findAll({
       attributes: ['consultaId']
@@ -555,7 +584,7 @@ const facturacionService = {
           detalles.push({
             servicioId: tieneServicio ? referencia.id : null,
             productoId: tieneProducto ? referencia.id : null,
-            descripcion: referencia.nombre,
+            descripcion: tieneProducto && referencia.unidadMedida ? `${referencia.nombre} (${referencia.unidadMedida})` : referencia.nombre,
             cantidad,
             precioUnitario: (precioCentavos / 100).toFixed(2),
             subtotal: (subtotalCentavos / 100).toFixed(2)
