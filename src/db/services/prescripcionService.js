@@ -53,6 +53,7 @@ const prescripcionService = {
       unidadConcentracion: datos.unidadConcentracion,
       dosisIndicada,
       unidadDosis: datos.unidadDosis,
+      unidadAdministracion: datos.unidadAdministracion,
       frecuenciaHoras: datos.frecuenciaHoras,
       duracionDias: datos.duracionDias,
       indicaciones: datos.indicaciones || null,
