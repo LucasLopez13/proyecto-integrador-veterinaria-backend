@@ -7,9 +7,11 @@ module.exports = (sequelize, DataTypes) => {
       Consulta.belongsTo(models.Mascota, { foreignKey: 'mascotaId', as: 'mascota' });
       Consulta.belongsTo(models.Usuario, { foreignKey: 'veterinarioId', as: 'veterinario' });
       Consulta.belongsTo(models.Turno, { foreignKey: 'turnoId', as: 'turno' });
-      Consulta.hasMany(models.Prescripcion, {foreignKey: 'consultaId',as: 'prescripciones'});
-      Consulta.hasMany(models.VersionConsulta, {foreignKey: 'consultaId',as: 'versiones'});
-      Consulta.hasMany(models.MovimientoStock, {foreignKey: 'consultaId', as: 'movimientosStock'});
+      Consulta.hasMany(models.Prescripcion, { foreignKey: 'consultaId', as: 'prescripciones' });
+      Consulta.hasMany(models.Receta, { foreignKey: 'consultaId', as: 'recetas' });
+      Consulta.hasMany(models.VersionConsulta, { foreignKey: 'consultaId', as: 'versiones' });
+      Consulta.hasMany(models.ConceptoConsulta, { foreignKey: 'consultaId', as: 'conceptosFacturacion' });
+      Consulta.hasMany(models.MovimientoStock, { foreignKey: 'consultaId', as: 'movimientosStock' });
     }
   }
 
@@ -83,7 +85,7 @@ module.exports = (sequelize, DataTypes) => {
       hooks: {
         beforeDestroy: (instance, options) => {
           if (options && options.force) {
-            throw new Error('Prohibición estricta de borrados físicos sobre registros médicos (solo soft delete permitido)');
+            throw new Error('Prohibicion estricta de borrados fisicos sobre registros medicos (solo soft delete permitido)');
           }
         }
       }

@@ -53,7 +53,7 @@ const archivoMedicoService = {
       });
     }
     throw new ForbiddenError(
-      'No tienes permisos para consultar archivos médicos'
+      'No tienes permisos para consultar archivos medicos'
     );
   },
 
@@ -64,7 +64,7 @@ const archivoMedicoService = {
 
     if (!archivo) {
       throw new NotFoundError(
-        `Archivo médico con id ${id} no encontrado`
+        `Archivo medico con id ${id} no encontrado`
       );
     }
     await verificarAccesoMascota(
@@ -93,7 +93,7 @@ const archivoMedicoService = {
 
     if (!archivo) {
       throw new NotFoundError(
-        `Archivo médico con id ${id} no encontrado`
+        `Archivo medico con id ${id} no encontrado`
       );
     }
     await verificarAccesoMascota(
@@ -107,13 +107,13 @@ const archivoMedicoService = {
     const rol = getRole(usuario);
     if (rol !== 'profesional' && rol !== 'admin') {
       throw new ForbiddenError(
-        'Solo un profesional o administrador puede eliminar archivos médicos'
+        'Solo un profesional o administrador puede eliminar archivos medicos'
       );
     }
     const archivo = await ArchivoMedico.findByPk(id);
     if (!archivo) {
       throw new NotFoundError(
-        `Archivo médico con id ${id} no encontrado`
+        `Archivo medico con id ${id} no encontrado`
       );
     }
     await verificarAccesoMascota(
@@ -132,7 +132,7 @@ const archivoMedicoService = {
     await archivo.destroy();
 
     return {
-      message: 'Archivo médico eliminado correctamente'
+      message: 'Archivo medico eliminado correctamente'
     };
   }
 };

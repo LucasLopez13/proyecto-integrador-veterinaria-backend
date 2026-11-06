@@ -1,9 +1,29 @@
 const crypto = require('crypto');
 const db = require('../models');
-const { Consulta, Mascota, Usuario, Turno, VersionConsulta } = db;
-const { NotFoundError, ForbiddenError, BadRequestError } = require('../utils/customErrors');
+const {
+  Consulta,
+  Mascota,
+  Usuario,
+  Turno,
+  VersionConsulta,
+  Receta,
+  Producto
+} = db;
 
-function generarHashVersion({ consultaId, numeroVersion, autorId, tipoAccion, fechaVersion, snapshot }) {
+const {
+  NotFoundError,
+  ForbiddenError,
+  BadRequestError
+} = require('../utils/customErrors');
+
+function generarHashVersion({
+  consultaId,
+  numeroVersion,
+  autorId,
+  tipoAccion,
+  fechaVersion,
+  snapshot
+}) {
   const payload = JSON.stringify({
     consultaId,
     numeroVersion,
@@ -12,29 +32,71 @@ function generarHashVersion({ consultaId, numeroVersion, autorId, tipoAccion, fe
     fechaVersion: new Date(fechaVersion).toISOString(),
     snapshot
   });
+
   return crypto.createHash('sha256').update(payload).digest('hex');
 }
 
 const consultaService = {
   create: async (datos, usuario) => {
     return await db.sequelize.transaction(async (t) => {
-      const mascota = await Mascota.findByPk(datos.mascotaId, { transaction: t });
+      const mascota = await Mascota.findByPk(datos.mascotaId, {
+        transaction: t
+      });
+
       if (!mascota) {
-        throw new NotFoundError(`La mascota con id ${datos.mascotaId} no existe`);
+        throw new NotFoundError(
+          `La mascota con id ${datos.mascotaId} no existe`
+        );
       }
 
       let turnoAsociado = null;
+
       if (datos.turnoId) {
-        turnoAsociado = await Turno.findByPk(datos.turnoId, { transaction: t });
+        turnoAsociado = await Turno.findByPk(datos.turnoId, {
+          transaction: t
+        });
+
         if (!turnoAsociado) {
-          throw new NotFoundError(`El turno con id ${datos.turnoId} no existe`);
+          throw new NotFoundError(
+            `El turno con id ${datos.turnoId} no existe`
+          );
         }
 
         if (turnoAsociado.mascotaId !== Number(datos.mascotaId)) {
-          throw new BadRequestError('El turno seleccionado no corresponde a la mascota indicada');
+          throw new BadRequestError(
+            'El turno seleccionado no corresponde a la mascota indicada'
+          );
         }
+      } else {
+        turnoAsociado = await Turno.findOne({
+          where: {
+            mascotaId: Number(datos.mascotaId),
+            estado: ['pendiente', 'confirmado']
+          },
+          order: [['fecha', 'ASC']],
+          transaction: t
+        });
+      }
 
-        await turnoAsociado.update({ estado: 'atendido' }, { transaction: t });
+      if (turnoAsociado) {
+        await turnoAsociado.update(
+          { estado: 'atendido' },
+          { transaction: t }
+        );
+      }
+
+      if (db.Triage) {
+        const triagesActivos = await db.Triage.findAll({
+          where: {
+            mascotaId: Number(datos.mascotaId),
+            estado: ['ACTIVO', 'en_espera', 'en_atencion']
+          },
+          transaction: t
+        });
+        for (const tr of triagesActivos) {
+          await tr.update({ estado: 'FINALIZADO' }, { transaction: t });
+          await tr.destroy({ force: false, transaction: t });
+        }
       }
 
       const nuevaConsulta = await Consulta.create(
@@ -45,20 +107,27 @@ const consultaService = {
           objetivo: datos.objetivo,
           peso: Number(datos.peso),
           temperatura: Number(datos.temperatura),
-          frecuenciaCardiaca: datos.frecuenciaCardiaca ? Number(datos.frecuenciaCardiaca) : null,
-          frecuenciaRespiratoria: datos.frecuenciaRespiratoria ? Number(datos.frecuenciaRespiratoria) : null,
+          frecuenciaCardiaca: datos.frecuenciaCardiaca
+            ? Number(datos.frecuenciaCardiaca)
+            : null,
+          frecuenciaRespiratoria: datos.frecuenciaRespiratoria
+            ? Number(datos.frecuenciaRespiratoria)
+            : null,
           analisis: datos.analisis,
           plan: datos.plan,
           observaciones: datos.observaciones || null,
           mascotaId: datos.mascotaId,
           veterinarioId: usuario.id,
-          turnoId: datos.turnoId || null
+          turnoId: turnoAsociado ? turnoAsociado.id : (datos.turnoId || null)
         },
         { transaction: t }
       );
 
       if (datos.peso !== undefined && datos.peso !== null) {
-        await mascota.update({ peso: Number(datos.peso) }, { transaction: t });
+        await mascota.update(
+          { peso: Number(datos.peso) },
+          { transaction: t }
+        );
       }
 
       const snapshotInicial = {
@@ -77,6 +146,7 @@ const consultaService = {
       };
 
       const fechaVersion = nuevaConsulta.createdAt || new Date();
+
       const hashSha256 = generarHashVersion({
         consultaId: nuevaConsulta.id,
         numeroVersion: 1,
@@ -102,8 +172,13 @@ const consultaService = {
         { transaction: t }
       );
 
-      if (Array.isArray(datos.consumosStock) && datos.consumosStock.length > 0) {
+      // Deduccion de insumos de farmacia consumidos durante la atencion clinica
+      if (
+        Array.isArray(datos.consumosStock) &&
+        datos.consumosStock.length > 0
+      ) {
         const inventarioService = require('./inventarioService');
+
         for (const item of datos.consumosStock) {
           await inventarioService.registrarConsumo(
             {
@@ -111,7 +186,9 @@ const consultaService = {
               loteId: item.loteId,
               cantidad: item.cantidad,
               consultaId: nuevaConsulta.id,
-              observaciones: item.observaciones || `Consumo clinico en atencion #${nuevaConsulta.id}`
+              observaciones:
+                item.observaciones ||
+                `Consumo clinico en atencion #${nuevaConsulta.id}`
             },
             usuario,
             t
@@ -158,8 +235,11 @@ const consultaService = {
     }
 
     const rol = String(usuario.rol?.nombre || usuario.rol || '').toUpperCase();
+
     if (rol !== 'ADMIN' && consulta.veterinarioId !== usuario.id) {
-      throw new ForbiddenError('Solo el profesional responsable de la atencion o un administrador pueden enmendar esta consulta');
+      throw new ForbiddenError(
+        'Solo el profesional responsable de la atencion o un administrador pueden enmendar esta consulta'
+      );
     }
 
     const camposAuditables = [
@@ -186,6 +266,7 @@ const consultaService = {
         if (typeof valorActual === 'number') {
           valorNuevo = Number(valorNuevo);
         }
+
         if (valorNuevo === '' && valorActual === null) {
           valorNuevo = null;
         }
@@ -199,28 +280,62 @@ const consultaService = {
     }
 
     if (!huboCambios) {
-      throw new BadRequestError('No se detectaron cambios en los campos clinicos de la consulta.');
+      throw new BadRequestError(
+        'No se detectaron cambios en los campos clinicos de la consulta.'
+      );
     }
 
     const versionActual = consulta.version || 1;
     const nuevaVersion = versionActual + 1;
 
     const nuevoSnapshot = {
-      subjetivo: datos.subjetivo !== undefined ? datos.subjetivo : consulta.subjetivo,
-      objetivo: datos.objetivo !== undefined ? datos.objetivo : consulta.objetivo,
-      peso: datos.peso !== undefined ? Number(datos.peso) : consulta.peso,
-      temperatura: datos.temperatura !== undefined ? Number(datos.temperatura) : consulta.temperatura,
-      frecuenciaCardiaca: datos.frecuenciaCardiaca !== undefined ? (datos.frecuenciaCardiaca ? Number(datos.frecuenciaCardiaca) : null) : consulta.frecuenciaCardiaca,
-      frecuenciaRespiratoria: datos.frecuenciaRespiratoria !== undefined ? (datos.frecuenciaRespiratoria ? Number(datos.frecuenciaRespiratoria) : null) : consulta.frecuenciaRespiratoria,
-      analisis: datos.analisis !== undefined ? datos.analisis : consulta.analisis,
-      plan: datos.plan !== undefined ? datos.plan : consulta.plan,
-      observaciones: datos.observaciones !== undefined ? datos.observaciones : consulta.observaciones,
+      subjetivo:
+        datos.subjetivo !== undefined
+          ? datos.subjetivo
+          : consulta.subjetivo,
+      objetivo:
+        datos.objetivo !== undefined
+          ? datos.objetivo
+          : consulta.objetivo,
+      peso:
+        datos.peso !== undefined
+          ? Number(datos.peso)
+          : consulta.peso,
+      temperatura:
+        datos.temperatura !== undefined
+          ? Number(datos.temperatura)
+          : consulta.temperatura,
+      frecuenciaCardiaca:
+        datos.frecuenciaCardiaca !== undefined
+          ? datos.frecuenciaCardiaca
+            ? Number(datos.frecuenciaCardiaca)
+            : null
+          : consulta.frecuenciaCardiaca,
+      frecuenciaRespiratoria:
+        datos.frecuenciaRespiratoria !== undefined
+          ? datos.frecuenciaRespiratoria
+            ? Number(datos.frecuenciaRespiratoria)
+            : null
+          : consulta.frecuenciaRespiratoria,
+      analisis:
+        datos.analisis !== undefined
+          ? datos.analisis
+          : consulta.analisis,
+      plan:
+        datos.plan !== undefined
+          ? datos.plan
+          : consulta.plan,
+      observaciones:
+        datos.observaciones !== undefined
+          ? datos.observaciones
+          : consulta.observaciones,
       fecha: consulta.fecha,
       mascotaId: consulta.mascotaId,
       veterinarioId: consulta.veterinarioId
     };
 
     const fechaVersion = new Date();
+
     const hashSha256 = generarHashVersion({
       consultaId: consulta.id,
       numeroVersion: nuevaVersion,
@@ -249,7 +364,9 @@ const consultaService = {
     });
 
     if (valoresModificados.peso !== undefined && consulta.mascota) {
-      await consulta.mascota.update({ peso: Number(valoresModificados.peso) });
+      await consulta.mascota.update({
+        peso: Number(valoresModificados.peso)
+      });
     }
 
     return await Consulta.findByPk(consulta.id, {
@@ -286,8 +403,15 @@ const consultaService = {
     }
 
     const rol = String(usuario.rol?.nombre || usuario.rol || '').toUpperCase();
-    if (rol === 'CLIENTE' && consulta.mascota && consulta.mascota.usuarioId !== usuario.id) {
-      throw new ForbiddenError('No tienes permisos para consultar la auditoria de esta consulta');
+
+    if (
+      rol === 'CLIENTE' &&
+      consulta.mascota &&
+      consulta.mascota.usuarioId !== usuario.id
+    ) {
+      throw new ForbiddenError(
+        'No tienes permisos para consultar la auditoria de esta consulta'
+      );
     }
 
     let versiones = await VersionConsulta.findAll({
@@ -302,7 +426,6 @@ const consultaService = {
       order: [['numeroVersion', 'ASC']]
     });
 
-
     if (versiones.length === 0) {
       const snapshotInicial = {
         subjetivo: consulta.subjetivo,
@@ -316,7 +439,9 @@ const consultaService = {
         observaciones: consulta.observaciones,
         fecha: consulta.fecha
       };
+
       const fechaVersion = consulta.createdAt || new Date();
+
       const hashSha256 = generarHashVersion({
         consultaId: consulta.id,
         numeroVersion: 1,
@@ -365,8 +490,11 @@ const consultaService = {
     }
 
     const rol = String(usuario.rol?.nombre || usuario.rol || '').toUpperCase();
+
     if (rol !== 'ADMIN' && consulta.veterinarioId !== usuario.id) {
-      throw new ForbiddenError('Solo el profesional responsable de la atencion o un administrador pueden anular esta consulta');
+      throw new ForbiddenError(
+        'Solo el profesional responsable de la atencion o un administrador pueden anular esta consulta'
+      );
     }
 
     const versionActual = consulta.version || 1;
@@ -400,7 +528,8 @@ const consultaService = {
       numeroVersion: nuevaVersion,
       autorId: usuario.id,
       tipoAccion: 'ANULACION_LOGICA',
-      motivoEdicion: motivoAnulacion || 'Anulacion logica de la consulta medica',
+      motivoEdicion:
+        motivoAnulacion || 'Anulacion logica de la consulta medica',
       valoresAnteriores: null,
       valoresModificados: { estado: 'ANULADA_LOGICAMENTE' },
       datosCompletosSnapshot: snapshotFinal,
@@ -411,7 +540,8 @@ const consultaService = {
     await consulta.destroy({ force: false });
 
     return {
-      message: 'Consulta anulada logicamente de manera exitosa (soft delete registrado en auditoria)',
+      message:
+        'Consulta anulada logicamente de manera exitosa (soft delete registrado en auditoria)',
       consultaId: id,
       versionAnulacion: nuevaVersion
     };
@@ -419,13 +549,19 @@ const consultaService = {
 
   getByMascotaId: async (mascotaId, usuario) => {
     const mascota = await Mascota.findByPk(mascotaId);
+
     if (!mascota) {
-      throw new NotFoundError(`La mascota con id ${mascotaId} no existe`);
+      throw new NotFoundError(
+        `La mascota con id ${mascotaId} no existe`
+      );
     }
 
     const rol = String(usuario.rol?.nombre || usuario.rol || '').toLowerCase();
+
     if (rol === 'cliente' && mascota.usuarioId !== usuario.id) {
-      throw new ForbiddenError('No tienes permisos para consultar la historia clinica de esta mascota');
+      throw new ForbiddenError(
+        'No tienes permisos para consultar la historia clinica de esta mascota'
+      );
     }
 
     return await Consulta.findAll({
@@ -437,6 +573,13 @@ const consultaService = {
           attributes: ['id', 'nombre', 'apellido', 'email', 'telefono']
         },
         { model: Turno, as: 'turno' },
+        {
+          model: Receta,
+          as: 'recetas',
+          include: [
+            { model: Producto, as: 'producto' }
+          ]
+        },
         {
           model: VersionConsulta,
           as: 'versiones',
@@ -464,6 +607,13 @@ const consultaService = {
         },
         { model: Turno, as: 'turno' },
         {
+          model: Receta,
+          as: 'recetas',
+          include: [
+            { model: Producto, as: 'producto' }
+          ]
+        },
+        {
           model: VersionConsulta,
           as: 'versiones',
           include: [
@@ -482,8 +632,15 @@ const consultaService = {
     }
 
     const rol = String(usuario.rol?.nombre || usuario.rol || '').toLowerCase();
-    if (rol === 'cliente' && consulta.mascota && consulta.mascota.usuarioId !== usuario.id) {
-      throw new ForbiddenError('No tienes permisos para consultar esta atencion medica');
+
+    if (
+      rol === 'cliente' &&
+      consulta.mascota &&
+      consulta.mascota.usuarioId !== usuario.id
+    ) {
+      throw new ForbiddenError(
+        'No tienes permisos para consultar esta atencion medica'
+      );
     }
 
     return consulta;
@@ -499,6 +656,13 @@ const consultaService = {
           attributes: ['id', 'nombre', 'apellido', 'email', 'telefono']
         },
         { model: Turno, as: 'turno' },
+        {
+          model: Receta,
+          as: 'recetas',
+          include: [
+            { model: Producto, as: 'producto' }
+          ]
+        },
         {
           model: VersionConsulta,
           as: 'versiones',

@@ -1,20 +1,30 @@
 const express = require('express');
 const recetaController = require('../controllers/recetaController');
-const { authenticateToken, hasRole } = require('../middlewares/auth.middleware');
+const schemaValidator = require('../middlewares/schemaValidator');
+
+const {
+  authenticateToken,
+  hasRole
+} = require('../middlewares/auth.middleware');
+
+const {
+  recetaCreateSchema,
+  recetaUpdateSchema
+} = require('../schema/recetaSchema');
 
 const router = express.Router();
 
 router.get(
   '/',
   authenticateToken,
-  hasRole('cliente'),
+  hasRole('cliente', 'profesional', 'admin'),
   recetaController.getAll
 );
 
 router.get(
   '/:id',
   authenticateToken,
-  hasRole('cliente'),
+  hasRole('cliente', 'profesional', 'admin'),
   recetaController.getById
 );
 
@@ -22,6 +32,7 @@ router.post(
   '/',
   authenticateToken,
   hasRole('profesional', 'admin'),
+  schemaValidator(recetaCreateSchema),
   recetaController.create
 );
 
@@ -29,6 +40,7 @@ router.put(
   '/:id',
   authenticateToken,
   hasRole('profesional', 'admin'),
+  schemaValidator(recetaUpdateSchema),
   recetaController.update
 );
 

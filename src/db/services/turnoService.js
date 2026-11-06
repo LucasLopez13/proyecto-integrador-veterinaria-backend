@@ -1,6 +1,6 @@
 
 const db = require('../models');
-const { Turno, Mascota, Usuario, Pago } = db;
+const { Turno, Mascota, Usuario, Pago, Consulta } = db;
 const {
   NotFoundError,
   ForbiddenError,
@@ -18,13 +18,63 @@ const getRolNombre = (usuario) => {
 };
 
 const esProfesional = (rol) =>
-  ['profesional', 'admin'].includes(rol);
+  ['profesional', 'admin', 'recepcion'].includes(rol);
 
 const fechaEnElPasado = (fecha) =>
   fecha && new Date(fecha).getTime() < Date.now() - 5 * 60 * 1000;
 
+const sincronizarTurnosAtendidos = async () => {
+  try {
+    if (!Consulta) return;
+    const turnosAbiertos = await Turno.findAll({
+      where: {
+        estado: ['pendiente', 'confirmado']
+      },
+      order: [['fecha', 'ASC']]
+    });
+
+    for (const turno of turnosAbiertos) {
+      let consultaVinculada = await Consulta.findOne({
+        where: { turnoId: turno.id }
+      });
+
+      if (!consultaVinculada) {
+        consultaVinculada = await Consulta.findOne({
+          where: {
+            mascotaId: turno.mascotaId,
+            turnoId: null
+          },
+          order: [['fecha', 'DESC']]
+        });
+
+        if (consultaVinculada) {
+          await consultaVinculada.update({ turnoId: turno.id });
+        }
+      }
+
+      if (consultaVinculada) {
+        await turno.update({ estado: 'atendido' });
+        if (db.Triage) {
+          await db.Triage.update(
+            { estado: 'atendido' },
+            {
+              where: {
+                mascotaId: turno.mascotaId,
+                estado: ['en_espera', 'en_atencion']
+              }
+            }
+          );
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Error al sincronizar turnos atendidos:', err);
+  }
+};
+
 const turnoService = {
   getAll: async (usuario, query = {}) => {
+    await sincronizarTurnosAtendidos();
     const rol = getRolNombre(usuario);
     const page = query.page ? parseInt(query.page, 10) : null;
     const limit = query.limit ? parseInt(query.limit, 10) : null;
@@ -216,10 +266,11 @@ const turnoService = {
     }
 
     const transicionesPermitidas = {
-      pendiente: ['confirmado', 'cancelado'],
-      confirmado: ['completado', 'cancelado'],
+      pendiente: ['confirmado', 'atendido', 'completado', 'cancelado'],
+      confirmado: ['atendido', 'completado', 'cancelado'],
       cancelado: [],
-      completado: []
+      completado: [],
+      atendido: ['completado']
     };
 
     const estadosPermitidos = transicionesPermitidas[turno.estado] || [];

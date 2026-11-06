@@ -63,7 +63,7 @@ const archivoMedicoController = {
         try {
             if (!req.file) {
                 return res.status(400).json({
-                    message: 'Debe adjuntar un archivo médico'
+                    message: 'Debe adjuntar un archivo medico'
                 });
             }
 

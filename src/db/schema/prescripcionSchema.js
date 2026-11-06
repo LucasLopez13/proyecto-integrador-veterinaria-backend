@@ -8,7 +8,10 @@ const prescripcionCreateSchema = Joi.object({
   unidadDosis: Joi.string().trim().min(1).max(30).required(),
   unidadAdministracion: Joi.string()
     .valid('ml', 'comprimidos')
-    .required()
+    .required(),
+  frecuenciaHoras: Joi.number().integer().positive().required(),
+  duracionDias: Joi.number().integer().positive().required(),
+  indicaciones: Joi.string().trim().max(2000).allow('', null).optional(),
 });
 
 module.exports = {

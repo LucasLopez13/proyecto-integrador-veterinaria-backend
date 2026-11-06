@@ -3,8 +3,72 @@ const { Triage, Mascota, Usuario, Turno } = db;
 const { NotFoundError, BadRequestError } = require('../utils/customErrors');
 const { COLUMNAS_VALIDAS } = require('../schema/triageSchema');
 
+async function crearMascotaIngresoDirecto({
+  nombrePaciente,
+  especie,
+  raza,
+  nombreTutor,
+  telefonoTutor
+}) {
+  const textoTutor = (nombreTutor || 'Tutor Guardia').trim();
+  const partes = textoTutor.split(/\s+/);
+  const nombre = partes[0] || 'Tutor';
+  const apellido = partes.slice(1).join(' ') || 'Ingreso Directo';
+
+  let tutor = await Usuario.findOne({
+    where: {
+      nombre,
+      apellido
+    }
+  });
+
+  if (!tutor) {
+    const emailUnico = `guardia.${Date.now()}.${Math.floor(Math.random() * 10000)}@vetcare.local`;
+    tutor = await Usuario.create({
+      nombre,
+      apellido,
+      email: emailUnico,
+      password: 'guardia-ingreso-directo',
+      telefono: telefonoTutor || null,
+      rolId: 1
+    });
+  } else if (telefonoTutor && !tutor.telefono) {
+    await tutor.update({ telefono: telefonoTutor });
+  }
+
+  const nuevaMascota = await Mascota.create({
+    nombre: (nombrePaciente || 'Paciente Guardia').trim(),
+    especie: especie || 'Canino',
+    raza: raza || 'Ingreso Directo (Sin turno)',
+    usuarioId: tutor.id
+  });
+
+  return nuevaMascota;
+}
+
 const triageService = {
   getKanban: async () => {
+    try {
+      const triagesSinMascota = await Triage.findAll({
+        where: {
+          mascotaId: null
+        }
+      });
+
+      for (const tr of triagesSinMascota) {
+        const nuevaMascota = await crearMascotaIngresoDirecto({
+          nombrePaciente: tr.nombrePaciente,
+          especie: tr.especie,
+          raza: tr.raza,
+          nombreTutor: tr.nombreTutor,
+          telefonoTutor: tr.telefonoTutor
+        });
+        await tr.update({ mascotaId: nuevaMascota.id });
+      }
+    } catch (err) {
+      console.error('Error al vincular mascotas de ingreso directo en triage:', err);
+    }
+
     if (Turno) {
       try {
         const hoy = new Date();
@@ -73,7 +137,7 @@ const triageService = {
               raza: t.mascota.raza || null,
               nombreTutor: tutorNombre,
               telefonoTutor: telefono,
-              motivo: t.motivo || 'Consulta médica programada',
+              motivo: t.motivo || 'Consulta medica programada',
               fechaLlegada: t.fecha || new Date(),
               estado: 'ACTIVO',
               mascotaId: t.mascotaId,
@@ -139,15 +203,16 @@ const triageService = {
     return item;
   },
 
-  create: async (datos, usuario) => {
+  create: async (datos) => {
     let nombrePaciente = datos.nombrePaciente;
     let especie = datos.especie || 'Canino';
     let raza = datos.raza || null;
     let nombreTutor = datos.nombreTutor || null;
     let telefonoTutor = datos.telefonoTutor || null;
+    let mascotaId = datos.mascotaId || null;
 
-    if (datos.mascotaId) {
-      const mascota = await Mascota.findByPk(datos.mascotaId, {
+    if (mascotaId) {
+      const mascota = await Mascota.findByPk(mascotaId, {
         include: [{ model: Usuario, as: 'dueno' }]
       });
 
@@ -160,6 +225,15 @@ const triageService = {
           telefonoTutor = telefonoTutor || mascota.dueno.telefono;
         }
       }
+    } else {
+      const nuevaMascota = await crearMascotaIngresoDirecto({
+        nombrePaciente,
+        especie,
+        raza,
+        nombreTutor,
+        telefonoTutor
+      });
+      mascotaId = nuevaMascota.id;
     }
 
     const nuevoTriage = await Triage.create({
@@ -172,7 +246,7 @@ const triageService = {
       motivo: datos.motivo,
       fechaLlegada: datos.fechaLlegada || new Date(),
       notas: datos.notas || null,
-      mascotaId: datos.mascotaId || null,
+      mascotaId,
       veterinarioAsignadoId: datos.veterinarioAsignadoId || null,
       estado: 'ACTIVO'
     });
@@ -182,7 +256,7 @@ const triageService = {
 
   mover: async (id, nuevaColumna) => {
     if (!COLUMNAS_VALIDAS.includes(nuevaColumna)) {
-      throw new BadRequestError(`Columna '${nuevaColumna}' no válida.`);
+      throw new BadRequestError(`Columna '${nuevaColumna}' no valida.`);
     }
 
     const item = await Triage.findByPk(id);
@@ -217,7 +291,9 @@ const triageService = {
       message: 'Paciente egresado del tablero de triage y guardia correctamente',
       id
     };
-  }
+  },
+
+  crearMascotaIngresoDirecto
 };
 
 module.exports = triageService;

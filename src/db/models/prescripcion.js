@@ -65,6 +65,18 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.DATE,
         allowNull: true
       },
+      frecuenciaHoras: {
+        type: DataTypes.INTEGER,
+        allowNull: false
+      },
+      duracionDias: {
+        type: DataTypes.INTEGER,
+        allowNull: false
+      },
+      indicaciones: {
+        type: DataTypes.TEXT,
+        allowNull: true
+      },
       consultaId: {
         type: DataTypes.INTEGER,
         allowNull: false
@@ -83,7 +95,7 @@ module.exports = (sequelize, DataTypes) => {
       hooks: {
         beforeDestroy: (instance, options) => {
           if (options && options.force) {
-            throw new Error('Prohibición estricta de borrados físicos sobre registros médicos (solo soft delete permitido)');
+            throw new Error('Prohibicion estricta de borrados fisicos sobre registros medicos (solo soft delete permitido)');
           }
         }
       }

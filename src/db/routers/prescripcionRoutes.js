@@ -8,6 +8,6 @@ const {prescripcionCreateSchema} = require('../schema/prescripcionSchema');
 
 router.get('/consulta/:consultaId',authenticateToken,prescripcionController.getByConsultaId);
 router.post('/consulta/:consultaId',authenticateToken,hasRole('profesional', 'admin'),schemaValidator(prescripcionCreateSchema),prescripcionController.create);
-router.post('/:id/confirmar',authenticateToken,hasRole('profesional'),prescripcionController.confirm);
+router.post('/:id/confirmar',authenticateToken,hasRole('profesional','admin'),prescripcionController.confirm);
 
 module.exports = router;
