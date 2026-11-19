@@ -199,7 +199,10 @@ const facturacionController = {
       );
 
       res.json({
-        message: `La orden #${orden.id} fue abonada exitosamente`,
+        message:
+          orden.estado === 'en_revision'
+            ? `Pago informado para la orden #${orden.id}. Queda pendiente de aprobacion por la clinica.`
+            : `La orden #${orden.id} fue abonada exitosamente`,
         orden
       });
     } catch (error) {

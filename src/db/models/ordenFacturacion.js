@@ -46,7 +46,7 @@ module.exports = (sequelize, DataTypes) => {
         }
       },
       estado: {
-        type: DataTypes.ENUM('pendiente', 'pagada', 'anulada'),
+        type: DataTypes.ENUM('pendiente', 'en_revision', 'pagada', 'anulada'),
         allowNull: false,
         defaultValue: 'pendiente'
       },

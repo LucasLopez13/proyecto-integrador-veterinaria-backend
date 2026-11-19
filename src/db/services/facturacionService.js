@@ -378,7 +378,7 @@ const facturacionService = {
   },
 
   actualizarEstadoOrden: async (id, estado, usuario) => {
-    if (!['pendiente', 'pagada', 'anulada'].includes(estado)) {
+    if (!['pendiente', 'en_revision', 'pagada', 'anulada'].includes(estado)) {
       throw new BadRequestError('Estado de orden invalido');
     }
 
@@ -397,11 +397,15 @@ const facturacionService = {
 
     const cambios = { estado };
     if (estado === 'pagada') {
-      cambios.fechaPago = new Date();
+      cambios.fechaPago = orden.fechaPago || new Date();
       if (!orden.metodoPago) {
         cambios.metodoPago = 'efectivo';
       }
-    } else if (estado === 'pendiente' || estado === 'anulada') {
+    } else if (estado === 'pendiente') {
+      cambios.fechaPago = null;
+      cambios.metodoPago = null;
+      cambios.comprobante = null;
+    } else if (estado === 'anulada') {
       cambios.fechaPago = null;
     }
 
@@ -437,6 +441,10 @@ const facturacionService = {
       throw new BadRequestError('Esta orden de facturacion ya se encuentra pagada');
     }
 
+    if (orden.estado === 'en_revision' && !esAdminOStaff) {
+      throw new BadRequestError('Esta orden ya tiene un pago informado pendiente de aprobacion por la clinica');
+    }
+
     if (orden.estado === 'anulada') {
       throw new BadRequestError('No se puede abonar una orden de facturacion anulada');
     }
@@ -445,8 +453,10 @@ const facturacionService = {
       ? datos.metodoPago
       : 'transferencia';
 
+    const nuevoEstado = esAdminOStaff ? 'pagada' : 'en_revision';
+
     await orden.update({
-      estado: 'pagada',
+      estado: nuevoEstado,
       metodoPago: metodoValido,
       fechaPago: new Date(),
       comprobante: datos.comprobante ? String(datos.comprobante).trim() : null,
